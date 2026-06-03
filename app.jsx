@@ -134,13 +134,9 @@ function App() {
             <span className="val mono">{fmtMoney(book.total.equity)}</span>
             <PnL value={book.total.totalPnl} />
           </div>
-          {DEV_MODE ? (
+          {DEV_MODE && (
             <button className="reset-btn" onClick={() => { if (confirm("Reset to dev fixtures? This replaces your current view.")) actions.reset(); }}>
               Reset sample data
-            </button>
-          ) : (
-            <button className="reset-btn" onClick={() => { if (confirm("Reload all data from the database?")) actions.reset(); }}>
-              Reload from DB
             </button>
           )}
         </div>
