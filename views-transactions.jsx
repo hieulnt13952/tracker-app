@@ -55,49 +55,54 @@ function CashForm({ state, actions, onClose }) {
 
 function TradeForm({ state, actions, onClose }) {
   const [accountId, setAccountId] = useState(state.accounts[0]?.id);
-  const [symbol, setSymbol] = useState("SPY");
+  const [symbol, setSymbol] = useState("");
   const [side, setSide] = useState("buy");
   const [qty, setQty] = useState("");
   const [price, setPrice] = useState("");
   const [fee, setFee] = useState("1.00");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
 
-  const inst = INSTRUMENTS[symbol] || {};
+  // new instrument fields — shown when symbol is not in state.instruments
+  const [instName, setInstName]       = useState("");
+  const [instClass, setInstClass]     = useState("Equity");
+  const [instDecimals, setInstDecimals] = useState("2");
+
+  const sym = symbol.trim().toUpperCase();
+  const inst = (state.instruments || {})[sym] || null;
+  const isNew = sym.length > 0 && !inst;
+  const decimals = inst ? inst.decimals : (parseInt(instDecimals) || 2);
+
   const q = parseFloat(qty) || 0;
   const p = parseFloat(price) || 0;
   const f = parseFloat(fee) || 0;
   const gross = q * p;
   const net = side === "buy" ? gross + f : gross - f;
-  const valid = accountId && symbol && q > 0 && p > 0;
+  const newInstValid = !isNew || instName.trim().length > 0;
+  const valid = accountId && sym && q > 0 && p > 0 && newInstValid;
 
   // pre-fill price with current mark on symbol change
   useEffect(() => {
-    if (state.marks[symbol] != null) setPrice(String(state.marks[symbol]));
-  }, [symbol]);
+    if (state.marks[sym] != null) setPrice(String(state.marks[sym]));
+  }, [sym]);
 
   // current holding of this symbol in this account
   const holding = useMemo(() => {
     const rows = computePositions(state, accountId);
-    const r = rows.find((x) => x.symbol === symbol);
+    const r = rows.find((x) => x.symbol === sym);
     return r ? r.qty : 0;
-  }, [state, accountId, symbol]);
+  }, [state, accountId, sym]);
   const cash = accountId ? computeCash(state, accountId) : 0;
   const oversell = side === "sell" && q > holding;
   const overspend = side === "buy" && net > cash;
 
   const submit = () => {
     if (!valid) return;
-    actions.addTrade({ accountId, symbol, side, qty: q, price: p, fee: f, date: new Date(date).toISOString() });
+    if (isNew) {
+      actions.addInstrument({ symbol: sym, name: instName.trim(), class: instClass, quote: "CAD", decimals: parseInt(instDecimals) || 2 });
+    }
+    actions.addTrade({ accountId, symbol: sym, side, qty: q, price: p, fee: f, date: new Date(date).toISOString() });
     onClose();
   };
-
-  const symbolsByClass = useMemo(() => {
-    const g = {};
-    for (const [sym, m] of Object.entries(INSTRUMENTS)) {
-      (g[m.class] = g[m.class] || []).push(sym);
-    }
-    return g;
-  }, []);
 
   return (
     <Modal title="New trade" onClose={onClose} width={500}>
@@ -112,21 +117,52 @@ function TradeForm({ state, actions, onClose }) {
             {state.accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
           </select>
         </Field>
-        <Field label="Instrument">
-          <select value={symbol} onChange={(e) => setSymbol(e.target.value)}>
-            {Object.entries(symbolsByClass).map(([cls, syms]) => (
-              <optgroup key={cls} label={cls}>
-                {syms.map((s) => <option key={s} value={s}>{s} — {INSTRUMENTS[s].name}</option>)}
-              </optgroup>
-            ))}
-          </select>
+        <Field label="Symbol" hint={inst ? inst.name : null}>
+          <input
+            type="text"
+            value={symbol}
+            placeholder="e.g. AAPL, BTC"
+            autoFocus
+            autoCapitalize="characters"
+            onChange={(e) => setSymbol(e.target.value.toUpperCase())}
+          />
         </Field>
       </div>
+
+      {isNew && (
+        <div className="new-inst-section">
+          <div className="new-inst-label">New instrument — fill in details</div>
+          <div className="form-row">
+            <Field label="Name">
+              <input type="text" value={instName} placeholder="e.g. Apple Inc." onChange={(e) => setInstName(e.target.value)} />
+            </Field>
+            <Field label="Asset class">
+              <select value={instClass} onChange={(e) => setInstClass(e.target.value)}>
+                <option>Equity</option>
+                <option>ETF</option>
+                <option>Crypto</option>
+                <option>FX</option>
+                <option>Bond</option>
+                <option>Commodity</option>
+              </select>
+            </Field>
+            <Field label="Decimals">
+              <select value={instDecimals} onChange={(e) => setInstDecimals(e.target.value)}>
+                <option value="0">0</option>
+                <option value="2">2</option>
+                <option value="4">4</option>
+                <option value="6">6</option>
+              </select>
+            </Field>
+          </div>
+        </div>
+      )}
+
       <div className="form-row">
-        <Field label={inst.class === "FX" ? "Units" : "Quantity"}
-          hint={side === "sell" ? `Holding: ${fmtNum(holding, inst.class === "FX" ? 0 : 0)}` : null}>
+        <Field label={inst?.class === "FX" ? "Units" : "Quantity"}
+          hint={side === "sell" ? `Holding: ${fmtNum(holding, 0)}` : null}>
           <input type="number" min="0" step="any" value={qty} placeholder="0"
-            onChange={(e) => setQty(e.target.value)} autoFocus />
+            onChange={(e) => setQty(e.target.value)} />
         </Field>
         <Field label="Price (CAD)">
           <input type="number" min="0" step="any" value={price} placeholder="0.00"
@@ -178,7 +214,7 @@ function TransactionsView({ state, actions, accountFilter }) {
         kind: "trade", id: t.id, date: t.date, accountId: t.accountId, account: acctName(t.accountId),
         side: t.side, symbol: t.symbol, qty: t.qty, price: t.price, fee: t.fee,
         label: `${t.side === "buy" ? "Buy" : "Sell"} ${t.symbol}`,
-        detail: `${fmtNum(t.qty, 0)} @ ${fmtMoney(t.price, "CAD", { decimals: INSTRUMENTS[t.symbol]?.decimals || 2 })}`,
+        detail: `${fmtNum(t.qty, 0)} @ ${fmtMoney(t.price, "CAD", { decimals: (state.instruments || {})[t.symbol]?.decimals || 2 })}`,
         amount: cashFlow,
         createdBy: t.createdBy || "—",
       };

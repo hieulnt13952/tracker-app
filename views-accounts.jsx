@@ -83,10 +83,78 @@ function AccountsView({ state, actions, onOpenAccount }) {
   );
 }
 
+// ---- transfer funds modal --------------------------------
+function TransferForm({ state, actions, fromAccountId, onClose }) {
+  const fromAccount = state.accounts.find((a) => a.id === fromAccountId);
+  const otherAccounts = state.accounts.filter((a) => a.id !== fromAccountId);
+  const [toId, setToId] = useState(otherAccounts[0]?.id || "");
+  const [amount, setAmount] = useState("");
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [note, setNote] = useState("");
+
+  const amt = parseFloat(amount) || 0;
+  const available = computeCash(state, fromAccountId);
+  const toAccount = state.accounts.find((a) => a.id === toId);
+  const valid = toId && amt > 0;
+  const overdraw = amt > available;
+
+  if (otherAccounts.length === 0) {
+    return (
+      <Modal title="Transfer funds" onClose={onClose}>
+        <p style={{ color: "var(--muted)", marginBottom: "1rem" }}>You need at least two accounts to transfer funds.</p>
+        <div className="modal-actions">
+          <button className="btn ghost" onClick={onClose}>Close</button>
+        </div>
+      </Modal>
+    );
+  }
+
+  const submit = () => {
+    if (!valid) return;
+    actions.transferFunds({
+      fromId: fromAccountId, fromName: fromAccount.name,
+      toId, toName: toAccount.name,
+      amount: amt, date: new Date(date).toISOString(), note: note.trim(),
+    });
+    onClose();
+  };
+
+  return (
+    <Modal title="Transfer funds" onClose={onClose}>
+      <Field label="From">
+        <input value={fromAccount.name} disabled />
+      </Field>
+      <Field label="To">
+        <select value={toId} onChange={(e) => setToId(e.target.value)}>
+          {otherAccounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+        </select>
+      </Field>
+      <Field label="Amount (CAD)" hint={`Available cash: ${fmtMoney(available)}`}>
+        <input type="number" min="0" step="0.01" value={amount} placeholder="0.00"
+          autoFocus onChange={(e) => setAmount(e.target.value)} />
+      </Field>
+      {overdraw && <div className="warn">Amount exceeds available cash — account will overdraw.</div>}
+      <Field label="Date">
+        <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+      </Field>
+      <Field label="Note (optional)">
+        <input type="text" value={note} placeholder="e.g. Rebalancing" onChange={(e) => setNote(e.target.value)} />
+      </Field>
+      <div className="modal-actions">
+        <button className="btn ghost" onClick={onClose}>Cancel</button>
+        <button className={`btn primary ${valid ? "" : "disabled"}`} disabled={!valid} onClick={submit}>
+          Transfer
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
 // ---- per-account detail -----------------------------------
 function AccountDetail({ state, actions, accountId, onBack }) {
   const account = state.accounts.find((a) => a.id === accountId);
   const s = useMemo(() => computeAccountSummary(state, account), [state, account]);
+  const [transferModal, setTransferModal] = useState(false);
   if (!account) return null;
 
   return (
@@ -96,6 +164,9 @@ function AccountDetail({ state, actions, accountId, onBack }) {
           <button className="back" onClick={onBack}>← Accounts</button>
           <h1>{account.name}</h1>
           <p className="view-sub">{account.broker} · {account.currency} book</p>
+        </div>
+        <div className="head-actions">
+          <button className="btn" onClick={() => setTransferModal(true)}>⇄ Transfer funds</button>
         </div>
       </header>
 
@@ -131,6 +202,7 @@ function AccountDetail({ state, actions, accountId, onBack }) {
           </table>
         </div>
       </section>
+      {transferModal && <TransferForm state={state} actions={actions} fromAccountId={accountId} onClose={() => setTransferModal(false)} />}
     </div>
   );
 }

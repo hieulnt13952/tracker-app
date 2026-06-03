@@ -271,6 +271,20 @@ table.data tr:hover .row-del { opacity: 1; }
   .cols-2 { grid-template-columns: 1fr; }
 }
 
+/* ---- new instrument inline section ---- */
+.new-inst-section {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px 4px;
+  margin-bottom: 12px;
+  background: var(--surface-2);
+}
+.new-inst-label {
+  font-size: 11px; font-weight: 600; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--accent);
+  margin-bottom: 10px;
+}
+
 /* ---- roadmap iframe ---- */
 .roadmap-frame {
   width: 100%; height: 100%;

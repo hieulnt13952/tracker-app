@@ -50,28 +50,26 @@ function uid(prefix = "id") {
   return prefix + "_" + Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4);
 }
 
-// ---- instrument catalog -----------------------------------
-// Each instrument is denominated (quoted) in a currency. For the
-// prototype every account books in USD; FX instruments represent
-// units of a foreign currency priced in USD.
-const INSTRUMENTS = {
-  // ETFs (priced in USD per share)
-  SPY: { name: "SPDR S&P 500 ETF", class: "ETF", quote: "CAD", decimals: 2 },
-  QQQ: { name: "Invesco QQQ Trust", class: "ETF", quote: "CAD", decimals: 2 },
-  VTI: { name: "Vanguard Total Market", class: "ETF", quote: "CAD", decimals: 2 },
-  IEFA: { name: "iShares Core MSCI EAFE", class: "ETF", quote: "CAD", decimals: 2 },
-  GLD: { name: "SPDR Gold Shares", class: "ETF", quote: "CAD", decimals: 2 },
-  TLT: { name: "iShares 20+ Yr Treasury", class: "ETF", quote: "CAD", decimals: 2 },
-  // FX (units of base ccy priced in USD)
-  EUR: { name: "Euro", class: "FX", quote: "CAD", decimals: 4 },
-  GBP: { name: "British Pound", class: "FX", quote: "CAD", decimals: 4 },
-  JPY: { name: "Japanese Yen", class: "FX", quote: "CAD", decimals: 6 },
-  CHF: { name: "Swiss Franc", class: "FX", quote: "CAD", decimals: 4 },
-};
+// Instruments are stored in Supabase and loaded into state.instruments.
+// seedInstruments() provides dev-mode defaults only.
 
 // ---- dev fixtures (seed data) --------------------------------
 // Only used when Supabase is not configured (DEV_MODE = true).
-// To load these into a real database use the "Load dev fixtures" button.
+function seedInstruments() {
+  return {
+    SPY:  { name: "SPDR S&P 500 ETF",        class: "ETF",    quote: "CAD", decimals: 2 },
+    QQQ:  { name: "Invesco QQQ Trust",         class: "ETF",    quote: "CAD", decimals: 2 },
+    VTI:  { name: "Vanguard Total Market",     class: "ETF",    quote: "CAD", decimals: 2 },
+    IEFA: { name: "iShares Core MSCI EAFE",    class: "ETF",    quote: "CAD", decimals: 2 },
+    GLD:  { name: "SPDR Gold Shares",          class: "ETF",    quote: "CAD", decimals: 2 },
+    TLT:  { name: "iShares 20+ Yr Treasury",   class: "ETF",    quote: "CAD", decimals: 2 },
+    EUR:  { name: "Euro",                       class: "FX",     quote: "CAD", decimals: 4 },
+    GBP:  { name: "British Pound",              class: "FX",     quote: "CAD", decimals: 4 },
+    JPY:  { name: "Japanese Yen",               class: "FX",     quote: "CAD", decimals: 6 },
+    CHF:  { name: "Swiss Franc",                class: "FX",     quote: "CAD", decimals: 4 },
+  };
+}
+
 function seedState() {
   const today = new Date();
   const daysAgo = (d) => {
@@ -115,7 +113,7 @@ function seedState() {
     EUR: 1.0905, GBP: 1.2820, JPY: 0.006610, CHF: 1.1240,
   };
 
-  return { accounts, cash, trades, marks, ui: { activeAccount: "all" } };
+  return { accounts, cash, trades, marks, instruments: seedInstruments(), ui: { activeAccount: "all" } };
 }
 
 // ---- Supabase client ----------------------------------------
@@ -132,17 +130,19 @@ const db = {
   async loadAll() {
     if (DEV_MODE) return seedState();
 
-    const [acctRes, cashRes, tradeRes, markRes] = await Promise.all([
+    const [acctRes, cashRes, tradeRes, markRes, instRes] = await Promise.all([
       _supa.from("accounts").select("*").order("created_at"),
       _supa.from("cash_transactions").select("*").order("date"),
       _supa.from("trades").select("*").order("date"),
       _supa.from("marks").select("*"),
+      _supa.from("instruments").select("*").order("symbol"),
     ]);
 
     if (acctRes.error) throw acctRes.error;
     if (cashRes.error) throw cashRes.error;
     if (tradeRes.error) throw tradeRes.error;
     if (markRes.error) throw markRes.error;
+    if (instRes.error) throw instRes.error;
 
     const cash = (cashRes.data || []).map((r) => ({
       id: r.id, accountId: r.account_id, type: r.type,
@@ -154,8 +154,18 @@ const db = {
     }));
     const marks = {};
     for (const m of markRes.data || []) marks[m.symbol] = +m.price;
+    const instruments = {};
+    for (const r of instRes.data || []) instruments[r.symbol] = { name: r.name, class: r.class, quote: r.quote, decimals: r.decimals };
 
-    return { accounts: acctRes.data || [], cash, trades, marks, ui: { activeAccount: "all" } };
+    return { accounts: acctRes.data || [], cash, trades, marks, instruments, ui: { activeAccount: "all" } };
+  },
+
+  async insertInstrument(inst) {
+    if (DEV_MODE) return;
+    const { error } = await _supa.from("instruments").insert({
+      symbol: inst.symbol, name: inst.name, class: inst.class, quote: inst.quote || "CAD", decimals: inst.decimals || 2,
+    });
+    if (error) console.error("db.insertInstrument:", error.message);
   },
 
   async insertAccount(account) {
@@ -287,7 +297,7 @@ function computePositions(state, accountFilter = "all") {
     const mtm = mark !== null ? L.qty * mark : 0;
     const costValue = L.qty * L.avgCost;
     const unrealized = mark !== null ? (mark - L.avgCost) * L.qty : 0;
-    const inst = INSTRUMENTS[L.symbol] || { name: L.symbol, class: "—", decimals: 2 };
+    const inst = (state.instruments || {})[L.symbol] || { name: L.symbol, class: "—", decimals: 2 };
     return {
       ...L, mark, mtm, costValue, unrealized,
       totalPnl: L.realized + unrealized,
@@ -360,7 +370,7 @@ function computeBook(state) {
 
 // expose globally for the babel-scoped component files
 Object.assign(window, {
-  INSTRUMENTS, CCY_SYMBOL, DEV_MODE,
+  CCY_SYMBOL, DEV_MODE,
   fmtMoney, fmtNum, fmtPct, fmtDate, uid,
   seedState, db,
   computePositions, computeCash, computeAccountSummary, computeBook,

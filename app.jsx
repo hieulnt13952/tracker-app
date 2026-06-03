@@ -58,6 +58,17 @@ function AppShell({ currentUser, onLogout }) {
       update((s) => { s.marks[sym] = price; });
       db.upsertMark(sym, price);
     },
+    addInstrument: (inst) => {
+      update((s) => { s.instruments[inst.symbol] = { name: inst.name, class: inst.class, quote: inst.quote || "CAD", decimals: inst.decimals || 2 }; });
+      db.insertInstrument(inst);
+    },
+    transferFunds: ({ fromId, fromName, toId, toName, amount, date, note }) => {
+      const withdraw = { id: uid("c"), createdBy: currentUser.username, accountId: fromId, type: "withdraw", amount, date, note: `Transfer to ${toName}${note ? " — " + note : ""}` };
+      const deposit  = { id: uid("c"), createdBy: currentUser.username, accountId: toId,   type: "deposit",  amount, date, note: `Transfer from ${fromName}${note ? " — " + note : ""}` };
+      update((s) => { s.cash.push(withdraw); s.cash.push(deposit); });
+      db.insertCash(withdraw);
+      db.insertCash(deposit);
+    },
     addAccount: ({ name, broker, funding }) => {
       const id = uid("acc");
       const account = { id, name, broker, currency: "CAD" };

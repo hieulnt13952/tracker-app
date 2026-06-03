@@ -41,6 +41,17 @@ create table if not exists marks (
   updated_at  timestamptz not null default now()
 );
 
+-- ---- Instruments -----------------------------------------------
+create table if not exists instruments (
+  symbol    text  primary key,
+  name      text  not null,
+  class     text  not null default 'Equity',
+  quote     text  not null default 'CAD',
+  decimals  int   not null default 2
+);
+
+alter table instruments disable row level security;
+
 -- ---- Users table (for login) ---------------------------------
 -- Passwords are bcrypt-hashed via pgcrypto — never stored in plain text.
 
