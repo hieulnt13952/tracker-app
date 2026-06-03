@@ -129,8 +129,8 @@ function AppShell({ currentUser, onLogout }) {
         <div className="brand">
           <div className="brand-mark">Hieu</div>
           <div className="brand-text">
-            <div className="brand-name">Personal Trading Book</div>
-            <div className="brand-sub">ETFs &amp; Gold &amp; Cryptocurrency &amp; and more...</div>
+            <div className="brand-name">Trading Book</div>
+            <div className="brand-sub">Keep track of our investments</div>
           </div>
         </div>
         <nav className="nav">
