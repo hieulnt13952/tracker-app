@@ -221,6 +221,21 @@ const db = {
       { onConflict: "symbol" }
     );
   },
+
+  // Verifies credentials via the login() Postgres RPC.
+  // Returns { username, display_name } on success, null on failure.
+  async login(username, password) {
+    if (DEV_MODE) {
+      // single dev account so the app is usable without a database
+      return (username === "dev" && password === "dev") ? { username: "dev", display_name: "Dev" } : null;
+    }
+    const { data, error } = await _supa.rpc("login", {
+      p_username: username.toLowerCase().trim(),
+      p_password: password,
+    });
+    if (error) { console.error("db.login:", error.message); return null; }
+    return (data && data.length > 0) ? data[0] : null;
+  },
 };
 
 // ============================================================

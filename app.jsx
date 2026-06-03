@@ -3,6 +3,17 @@
 // ============================================================
 
 function App() {
+  const [currentUser, setCurrentUser] = useState(() => getSession());
+
+  // Show login screen if not authenticated
+  if (!currentUser) {
+    return <LoginView onLogin={setCurrentUser} />;
+  }
+
+  return <AppShell currentUser={currentUser} onLogout={() => { clearSession(); setCurrentUser(null); }} />;
+}
+
+function AppShell({ currentUser, onLogout }) {
   // null = loading; populated once db.loadAll() resolves
   const [state, setState] = useState(DEV_MODE ? seedState() : null);
   const [dbError, setDbError] = useState(null);
@@ -139,6 +150,10 @@ function App() {
               Reset sample data
             </button>
           )}
+          <div className="sidebar-user">
+            <span className="sidebar-username">{currentUser.username}</span>
+            <button className="logout-btn" onClick={onLogout} title="Sign out">Sign out</button>
+          </div>
         </div>
       </aside>
 
