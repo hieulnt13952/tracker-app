@@ -1,0 +1,11 @@
+Add user with teh following template:
+```
+insert into users (username, password_hash, display_name)
+values ('hieu', crypt('your_password_here', gen_salt('bf')), 'Hieu');
+```
+
+Change password as below:
+```
+update users set password_hash = crypt('new_password', gen_salt('bf'))
+where username = 'hieu';
+```
