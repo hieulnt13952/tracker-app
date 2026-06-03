@@ -48,11 +48,11 @@ function AppShell({ currentUser, onLogout }) {
     },
     deleteCash: (id) => {
       update((s) => { s.cash = s.cash.filter((x) => x.id !== id); });
-      db.deleteCash(id);
+      db.softDeleteCash(id);
     },
     deleteTrade: (id) => {
       update((s) => { s.trades = s.trades.filter((x) => x.id !== id); });
-      db.deleteTrade(id);
+      db.softDeleteTrade(id);
     },
     setMark: (sym, price) => {
       update((s) => { s.marks[sym] = price; });

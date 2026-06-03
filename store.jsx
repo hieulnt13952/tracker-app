@@ -93,19 +93,19 @@ function seedState() {
   ];
 
   const trades = [
-    { id: uid("t"), accountId: "acc_alpha", symbol: "SPY", side: "buy", qty: 400, price: 480.2, fee: 1.0, date: daysAgo(100) },
-    { id: uid("t"), accountId: "acc_alpha", symbol: "SPY", side: "buy", qty: 200, price: 510.5, fee: 1.0, date: daysAgo(55) },
-    { id: uid("t"), accountId: "acc_alpha", symbol: "SPY", side: "sell", qty: 150, price: 545.0, fee: 1.0, date: daysAgo(15) },
-    { id: uid("t"), accountId: "acc_alpha", symbol: "GLD", side: "buy", qty: 300, price: 210.4, fee: 1.0, date: daysAgo(70) },
-    { id: uid("t"), accountId: "acc_alpha", symbol: "TLT", side: "buy", qty: 250, price: 92.1, fee: 1.0, date: daysAgo(60) },
-    { id: uid("t"), accountId: "acc_beta", symbol: "QQQ", side: "buy", qty: 350, price: 410.0, fee: 1.0, date: daysAgo(90) },
-    { id: uid("t"), accountId: "acc_beta", symbol: "QQQ", side: "sell", qty: 100, price: 455.0, fee: 1.0, date: daysAgo(25) },
-    { id: uid("t"), accountId: "acc_beta", symbol: "VTI", side: "buy", qty: 500, price: 240.3, fee: 1.0, date: daysAgo(80) },
-    { id: uid("t"), accountId: "acc_beta", symbol: "IEFA", side: "buy", qty: 600, price: 72.8, fee: 1.0, date: daysAgo(48) },
-    { id: uid("t"), accountId: "acc_fx", symbol: "EUR", side: "buy", qty: 100000, price: 1.0820, fee: 5.0, date: daysAgo(85) },
-    { id: uid("t"), accountId: "acc_fx", symbol: "GBP", side: "buy", qty: 60000, price: 1.2650, fee: 5.0, date: daysAgo(70) },
-    { id: uid("t"), accountId: "acc_fx", symbol: "EUR", side: "sell", qty: 40000, price: 1.0950, fee: 5.0, date: daysAgo(10) },
-    { id: uid("t"), accountId: "acc_fx", symbol: "JPY", side: "buy", qty: 5000000, price: 0.006750, fee: 5.0, date: daysAgo(35) },
+    { id: uid("t"), accountId: "acc_alpha", symbol: "SPY", side: "buy", qty: 400, price: 480.2, date: daysAgo(100) },
+    { id: uid("t"), accountId: "acc_alpha", symbol: "SPY", side: "buy", qty: 200, price: 510.5, date: daysAgo(55) },
+    { id: uid("t"), accountId: "acc_alpha", symbol: "SPY", side: "sell", qty: 150, price: 545.0, date: daysAgo(15) },
+    { id: uid("t"), accountId: "acc_alpha", symbol: "GLD", side: "buy", qty: 300, price: 210.4, date: daysAgo(70) },
+    { id: uid("t"), accountId: "acc_alpha", symbol: "TLT", side: "buy", qty: 250, price: 92.1, date: daysAgo(60) },
+    { id: uid("t"), accountId: "acc_beta", symbol: "QQQ", side: "buy", qty: 350, price: 410.0, date: daysAgo(90) },
+    { id: uid("t"), accountId: "acc_beta", symbol: "QQQ", side: "sell", qty: 100, price: 455.0, date: daysAgo(25) },
+    { id: uid("t"), accountId: "acc_beta", symbol: "VTI", side: "buy", qty: 500, price: 240.3, date: daysAgo(80) },
+    { id: uid("t"), accountId: "acc_beta", symbol: "IEFA", side: "buy", qty: 600, price: 72.8, date: daysAgo(48) },
+    { id: uid("t"), accountId: "acc_fx", symbol: "EUR", side: "buy", qty: 100000, price: 1.0820, date: daysAgo(85) },
+    { id: uid("t"), accountId: "acc_fx", symbol: "GBP", side: "buy", qty: 60000, price: 1.2650, date: daysAgo(70) },
+    { id: uid("t"), accountId: "acc_fx", symbol: "EUR", side: "sell", qty: 40000, price: 1.0950, date: daysAgo(10) },
+    { id: uid("t"), accountId: "acc_fx", symbol: "JPY", side: "buy", qty: 5000000, price: 0.006750, date: daysAgo(35) },
   ];
 
   const marks = {
@@ -132,8 +132,8 @@ const db = {
 
     const [acctRes, cashRes, tradeRes, markRes, instRes] = await Promise.all([
       _supa.from("accounts").select("*").order("created_at"),
-      _supa.from("cash_transactions").select("*").order("date"),
-      _supa.from("trades").select("*").order("date"),
+      _supa.from("cash_transactions").select("*").eq("deleted", false).order("date"),
+      _supa.from("trades").select("*").eq("deleted", false).order("date"),
       _supa.from("marks").select("*"),
       _supa.from("instruments").select("*").order("symbol"),
     ]);
@@ -150,7 +150,7 @@ const db = {
     }));
     const trades = (tradeRes.data || []).map((r) => ({
       id: r.id, accountId: r.account_id, symbol: r.symbol, side: r.side,
-      qty: +r.qty, price: +r.price, fee: +r.fee, date: r.date, createdBy: r.created_by,
+      qty: +r.qty, price: +r.price, date: r.date, createdBy: r.created_by,
     }));
     const marks = {};
     for (const m of markRes.data || []) marks[m.symbol] = +m.price;
@@ -185,25 +185,25 @@ const db = {
     if (error) console.error("db.insertCash:", error.message);
   },
 
-  async deleteCash(id) {
+  async softDeleteCash(id) {
     if (DEV_MODE) return;
-    const { error } = await _supa.from("cash_transactions").delete().eq("id", id);
-    if (error) console.error("db.deleteCash:", error.message);
+    const { error } = await _supa.from("cash_transactions").update({ deleted: true }).eq("id", id);
+    if (error) console.error("db.softDeleteCash:", error.message);
   },
 
   async insertTrade(t) {
     if (DEV_MODE) return;
     const { error } = await _supa.from("trades").insert({
       id: t.id, account_id: t.accountId, symbol: t.symbol, side: t.side,
-      qty: t.qty, price: t.price, fee: t.fee || 0, date: t.date, created_by: t.createdBy,
+      qty: t.qty, price: t.price, date: t.date, created_by: t.createdBy,
     });
     if (error) console.error("db.insertTrade:", error.message);
   },
 
-  async deleteTrade(id) {
+  async softDeleteTrade(id) {
     if (DEV_MODE) return;
-    const { error } = await _supa.from("trades").delete().eq("id", id);
-    if (error) console.error("db.deleteTrade:", error.message);
+    const { error } = await _supa.from("trades").update({ deleted: true }).eq("id", id);
+    if (error) console.error("db.softDeleteTrade:", error.message);
   },
 
   async upsertMark(symbol, price) {
@@ -223,7 +223,7 @@ const db = {
       { onConflict: "id" }
     );
     await _supa.from("trades").upsert(
-      s.trades.map((t) => ({ id: t.id, account_id: t.accountId, symbol: t.symbol, side: t.side, qty: t.qty, price: t.price, fee: t.fee, date: t.date })),
+      s.trades.map((t) => ({ id: t.id, account_id: t.accountId, symbol: t.symbol, side: t.side, qty: t.qty, price: t.price, date: t.date })),
       { onConflict: "id" }
     );
     await _supa.from("marks").upsert(
@@ -269,24 +269,23 @@ function computePositions(state, accountFilter = "all") {
       lots[key] = {
         accountId: t.accountId, symbol: t.symbol,
         qty: 0, avgCost: 0, realized: 0,
-        bought: 0, sold: 0, fees: 0, tradeCash: 0,
+        bought: 0, sold: 0, tradeCash: 0,
       };
     }
     const L = lots[key];
     const gross = t.qty * t.price;
-    L.fees += t.fee || 0;
     if (t.side === "buy") {
       const newQty = L.qty + t.qty;
       L.avgCost = newQty !== 0 ? (L.avgCost * L.qty + gross) / newQty : 0;
       L.qty = newQty;
       L.bought += t.qty;
-      L.tradeCash -= gross + (t.fee || 0); // cash out
+      L.tradeCash -= gross;
     } else {
       // sell — realize against avg cost
-      L.realized += (t.price - L.avgCost) * t.qty - (t.fee || 0);
+      L.realized += (t.price - L.avgCost) * t.qty;
       L.qty -= t.qty;
       L.sold += t.qty;
-      L.tradeCash += gross - (t.fee || 0); // cash in
+      L.tradeCash += gross;
       if (L.qty <= 0.0000001) { L.qty = 0; L.avgCost = 0; }
     }
   }
@@ -318,8 +317,8 @@ function computeCash(state, accountId) {
   const trades = state.trades.filter((t) => t.accountId === accountId);
   for (const t of trades) {
     const gross = t.qty * t.price;
-    if (t.side === "buy") bal -= gross + (t.fee || 0);
-    else bal += gross - (t.fee || 0);
+    if (t.side === "buy") bal -= gross;
+    else bal += gross;
   }
   return bal;
 }

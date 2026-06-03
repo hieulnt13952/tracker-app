@@ -59,7 +59,6 @@ function TradeForm({ state, actions, onClose }) {
   const [side, setSide] = useState("buy");
   const [qty, setQty] = useState("");
   const [price, setPrice] = useState("");
-  const [fee, setFee] = useState("1.00");
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
 
   // new instrument fields — shown when symbol is not in state.instruments
@@ -74,9 +73,7 @@ function TradeForm({ state, actions, onClose }) {
 
   const q = parseFloat(qty) || 0;
   const p = parseFloat(price) || 0;
-  const f = parseFloat(fee) || 0;
   const gross = q * p;
-  const net = side === "buy" ? gross + f : gross - f;
   const newInstValid = !isNew || instName.trim().length > 0;
   const valid = accountId && sym && q > 0 && p > 0 && newInstValid;
 
@@ -93,14 +90,14 @@ function TradeForm({ state, actions, onClose }) {
   }, [state, accountId, sym]);
   const cash = accountId ? computeCash(state, accountId) : 0;
   const oversell = side === "sell" && q > holding;
-  const overspend = side === "buy" && net > cash;
+  const overspend = side === "buy" && gross > cash;
 
   const submit = () => {
     if (!valid) return;
     if (isNew) {
       actions.addInstrument({ symbol: sym, name: instName.trim(), class: instClass, quote: "CAD", decimals: parseInt(instDecimals) || 2 });
     }
-    actions.addTrade({ accountId, symbol: sym, side, qty: q, price: p, fee: f, date: new Date(date).toISOString() });
+    actions.addTrade({ accountId, symbol: sym, side, qty: q, price: p, date: new Date(date).toISOString() });
     onClose();
   };
 
@@ -168,16 +165,10 @@ function TradeForm({ state, actions, onClose }) {
           <input type="number" min="0" step="any" value={price} placeholder="0.00"
             onChange={(e) => setPrice(e.target.value)} />
         </Field>
-        <Field label="Fee">
-          <input type="number" min="0" step="0.01" value={fee}
-            onChange={(e) => setFee(e.target.value)} />
-        </Field>
       </div>
       <div className="trade-preview">
-        <div><span>Gross</span><b className="mono">{fmtMoney(gross)}</b></div>
-        <div><span>Fee</span><b className="mono">{fmtMoney(f)}</b></div>
-        <div className="big"><span>Net cash {side === "buy" ? "out" : "in"}</span>
-          <b className="mono">{fmtMoney(net)}</b></div>
+        <div className="big"><span>Total cash {side === "buy" ? "out" : "in"}</span>
+          <b className="mono">{fmtMoney(gross)}</b></div>
       </div>
       {oversell && <div className="warn">Selling more than the current holding ({fmtNum(holding, 0)}) — position will go short.</div>}
       {overspend && <div className="warn">Cost exceeds available cash ({fmtMoney(cash)}) — account will overdraw.</div>}
@@ -209,10 +200,10 @@ function TransactionsView({ state, actions, accountFilter }) {
     }));
     const tradeRows = state.trades.map((t) => {
       const gross = t.qty * t.price;
-      const cashFlow = t.side === "buy" ? -(gross + (t.fee || 0)) : gross - (t.fee || 0);
+      const cashFlow = t.side === "buy" ? -gross : gross;
       return {
         kind: "trade", id: t.id, date: t.date, accountId: t.accountId, account: acctName(t.accountId),
-        side: t.side, symbol: t.symbol, qty: t.qty, price: t.price, fee: t.fee,
+        side: t.side, symbol: t.symbol, qty: t.qty, price: t.price,
         label: `${t.side === "buy" ? "Buy" : "Sell"} ${t.symbol}`,
         detail: `${fmtNum(t.qty, 0)} @ ${fmtMoney(t.price, "CAD", { decimals: (state.instruments || {})[t.symbol]?.decimals || 2 })}`,
         amount: cashFlow,
