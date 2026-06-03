@@ -37,12 +37,12 @@ function AppShell({ currentUser, onLogout }) {
 
   const actions = useMemo(() => ({
     addCash: (c) => {
-      const entry = { id: uid("c"), ...c };
+      const entry = { id: uid("c"), createdBy: currentUser.username, ...c };
       update((s) => s.cash.push(entry));
       db.insertCash(entry);
     },
     addTrade: (t) => {
-      const trade = { id: uid("t"), ...t };
+      const trade = { id: uid("t"), createdBy: currentUser.username, ...t };
       update((s) => s.trades.push(trade));
       db.insertTrade(trade);
     },
@@ -65,7 +65,7 @@ function AppShell({ currentUser, onLogout }) {
       update((s) => {
         s.accounts.push(account);
         if (funding > 0) {
-          const cash = { id: uid("c"), accountId: id, type: "deposit", amount: funding, date: new Date().toISOString(), note: "Opening deposit" };
+          const cash = { id: uid("c"), createdBy: currentUser.username, accountId: id, type: "deposit", amount: funding, date: new Date().toISOString(), note: "Opening deposit" };
           s.cash.push(cash);
           db.insertCash(cash);
         }
@@ -129,8 +129,8 @@ function AppShell({ currentUser, onLogout }) {
         <div className="brand">
           <div className="brand-mark">Hieu</div>
           <div className="brand-text">
-            <div className="brand-name">Trading Book</div>
-            <div className="brand-sub">Treasury &amp; Positions</div>
+            <div className="brand-name">Personal Trading Book</div>
+            <div className="brand-sub">ETFs &amp; Gold &amp; Cryptocurrency &amp; and more...</div>
           </div>
         </div>
         <nav className="nav">

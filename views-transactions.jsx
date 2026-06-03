@@ -169,6 +169,7 @@ function TransactionsView({ state, actions, accountFilter }) {
       kind: "cash", id: c.id, date: c.date, accountId: c.accountId, account: acctName(c.accountId),
       side: c.type, label: c.type === "deposit" ? "Cash deposit" : "Cash withdrawal",
       detail: c.note || "—", amount: c.type === "deposit" ? c.amount : -c.amount,
+      createdBy: c.createdBy || "—",
     }));
     const tradeRows = state.trades.map((t) => {
       const gross = t.qty * t.price;
@@ -179,6 +180,7 @@ function TransactionsView({ state, actions, accountFilter }) {
         label: `${t.side === "buy" ? "Buy" : "Sell"} ${t.symbol}`,
         detail: `${fmtNum(t.qty, 0)} @ ${fmtMoney(t.price, "CAD", { decimals: INSTRUMENTS[t.symbol]?.decimals || 2 })}`,
         amount: cashFlow,
+        createdBy: t.createdBy || "—",
       };
     });
     let all = [...cashRows, ...tradeRows];
@@ -214,7 +216,7 @@ function TransactionsView({ state, actions, accountFilter }) {
             <thead>
               <tr>
                 <th>Date</th><th>Type</th><th>Account</th><th>Detail</th>
-                <th className="r">Cash impact</th><th></th>
+                <th className="r">Cash impact</th><th>By</th><th></th>
               </tr>
             </thead>
             <tbody>
@@ -225,6 +227,7 @@ function TransactionsView({ state, actions, accountFilter }) {
                   <td>{r.account}</td>
                   <td className="muted">{r.detail}</td>
                   <td className="r"><PnL value={r.amount} /></td>
+                  <td className="muted" style={{ fontSize: 12 }}>{r.createdBy}</td>
                   <td className="r">
                     <button className="row-del" title="Delete"
                       onClick={() => { if (confirm("Delete this entry?")) r.kind === "cash" ? actions.deleteCash(r.id) : actions.deleteTrade(r.id); }}>
@@ -233,7 +236,7 @@ function TransactionsView({ state, actions, accountFilter }) {
                   </td>
                 </tr>
               ))}
-              {feed.length === 0 && <tr><td colSpan={6}><Empty title="No transactions yet" sub="Record a cash deposit or a trade to get started." /></td></tr>}
+              {feed.length === 0 && <tr><td colSpan={7}><Empty title="No transactions yet" sub="Record a cash deposit or a trade to get started." /></td></tr>}
             </tbody>
           </table>
         </div>

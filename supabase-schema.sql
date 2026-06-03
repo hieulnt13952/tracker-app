@@ -18,6 +18,7 @@ create table if not exists cash_transactions (
   amount      numeric     not null check (amount > 0),
   date        timestamptz not null,
   note        text,
+  created_by  text        references users(username) on delete set null,
   created_at  timestamptz not null default now()
 );
 
@@ -30,6 +31,7 @@ create table if not exists trades (
   price       numeric     not null check (price > 0),
   fee         numeric     not null default 0,
   date        timestamptz not null,
+  created_by  text        references users(username) on delete set null,
   created_at  timestamptz not null default now()
 );
 

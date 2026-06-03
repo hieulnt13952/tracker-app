@@ -146,11 +146,11 @@ const db = {
 
     const cash = (cashRes.data || []).map((r) => ({
       id: r.id, accountId: r.account_id, type: r.type,
-      amount: +r.amount, date: r.date, note: r.note,
+      amount: +r.amount, date: r.date, note: r.note, createdBy: r.created_by,
     }));
     const trades = (tradeRes.data || []).map((r) => ({
       id: r.id, accountId: r.account_id, symbol: r.symbol, side: r.side,
-      qty: +r.qty, price: +r.price, fee: +r.fee, date: r.date,
+      qty: +r.qty, price: +r.price, fee: +r.fee, date: r.date, createdBy: r.created_by,
     }));
     const marks = {};
     for (const m of markRes.data || []) marks[m.symbol] = +m.price;
@@ -170,7 +170,7 @@ const db = {
     if (DEV_MODE) return;
     const { error } = await _supa.from("cash_transactions").insert({
       id: c.id, account_id: c.accountId, type: c.type,
-      amount: c.amount, date: c.date, note: c.note,
+      amount: c.amount, date: c.date, note: c.note, created_by: c.createdBy,
     });
     if (error) console.error("db.insertCash:", error.message);
   },
@@ -185,7 +185,7 @@ const db = {
     if (DEV_MODE) return;
     const { error } = await _supa.from("trades").insert({
       id: t.id, account_id: t.accountId, symbol: t.symbol, side: t.side,
-      qty: t.qty, price: t.price, fee: t.fee || 0, date: t.date,
+      qty: t.qty, price: t.price, fee: t.fee || 0, date: t.date, created_by: t.createdBy,
     });
     if (error) console.error("db.insertTrade:", error.message);
   },
