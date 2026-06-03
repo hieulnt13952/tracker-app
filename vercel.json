@@ -1,5 +1,11 @@
 {
   "buildCommand": "npm run build",
   "outputDirectory": ".",
-  "framework": null
+  "framework": null,
+  "headers": [
+    {
+      "source": "/(.*).jsx",
+      "headers": [{ "key": "Content-Type", "value": "application/javascript" }]
+    }
+  ]
 }

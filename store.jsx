@@ -121,7 +121,7 @@ function seedState() {
 // ---- Supabase client ----------------------------------------
 const DEV_MODE = !window.SUPABASE_URL || window.SUPABASE_URL === "YOUR_SUPABASE_URL";
 
-const _supa = !DEV_MODE
+const _supa = (!DEV_MODE && window.supabase)
   ? window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY)
   : null;
 
