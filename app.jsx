@@ -94,11 +94,11 @@ function AppShell({ currentUser, onLogout }) {
   }), []);
 
   const nav = [
-    { id: "overview", label: "Overview", icon: "◈" },
-    { id: "accounts", label: "Accounts", icon: "▦" },
-    { id: "transactions", label: "Transactions", icon: "⇄" },
-    { id: "positions", label: "Positions & PnL", icon: "▤" },
-    { id: "roadmap", label: "Hieu's Roadmap", icon: "◎" },
+    { id: "overview",     label: "Overview",       short: "Overview", icon: "◈" },
+    { id: "accounts",     label: "Accounts",        short: "Accounts", icon: "▦" },
+    { id: "transactions", label: "Transactions",    short: "Trades",   icon: "⇄" },
+    { id: "positions",    label: "Positions & PnL", short: "PnL",      icon: "▤" },
+    { id: "roadmap",      label: "Hieu's Roadmap",  short: "Roadmap",  icon: "◎" },
   ];
 
   const go = (r) => { setRoute(r); setOpenAccount(null); };
@@ -169,6 +169,18 @@ function AppShell({ currentUser, onLogout }) {
         </div>
       </aside>
 
+      {/* mobile top header */}
+      <header className="mobile-header">
+        <div className="mobile-brand">
+          <div className="brand-mark" style={{ width: 30, height: 30, fontSize: 11, borderRadius: 6 }}>H</div>
+          <span className="brand-name" style={{ fontSize: 14 }}>Personal Tracker</span>
+        </div>
+        <div style={{ textAlign: "right" }}>
+          <div className="mobile-equity-val mono">{fmtMoney(book.total.equity)}</div>
+          <PnL value={book.total.totalPnl} />
+        </div>
+      </header>
+
       {/* main */}
       <main className="main">
         {showFilter && (
@@ -189,6 +201,16 @@ function AppShell({ currentUser, onLogout }) {
           {route === "roadmap" && <iframe src="analytics-engineer-roadmap.html" className="roadmap-frame" title="Analytics Engineer Roadmap" />}
         </div>
       </main>
+
+      {/* mobile bottom nav */}
+      <nav className="mobile-bottom-nav">
+        {nav.map((n) => (
+          <button key={n.id} className={`mobile-nav-item ${route === n.id ? "active" : ""}`} onClick={() => go(n.id)}>
+            <span className="mobile-nav-icon">{n.icon}</span>
+            <span>{n.short}</span>
+          </button>
+        ))}
+      </nav>
     </div>
   );
 }

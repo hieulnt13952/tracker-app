@@ -271,6 +271,110 @@ table.data tr:hover .row-del { opacity: 1; }
   .cols-2 { grid-template-columns: 1fr; }
 }
 
+/* ============================================================
+   Mobile — 768px and below
+   ============================================================ */
+
+/* hide mobile chrome on desktop */
+.mobile-header, .mobile-bottom-nav { display: none; }
+
+@media (max-width: 768px) {
+
+  /* ---- core layout ---- */
+  .app { flex-direction: column; }
+  .sidebar { display: none; }
+  .main { flex: 1; min-height: 0; }
+  .main-scroll { padding-bottom: 0; }
+
+  /* ---- mobile top header ---- */
+  .mobile-header {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--ink); color: #cdd4d1;
+    padding: 10px 16px;
+    flex-shrink: 0;
+    gap: 12px;
+  }
+  .mobile-brand { display: flex; align-items: center; gap: 9px; }
+  .mobile-equity-val { font-size: 15px; color: #fff; font-weight: 500; }
+
+  /* ---- mobile bottom nav ---- */
+  .mobile-bottom-nav {
+    display: flex;
+    background: var(--ink);
+    border-top: 1px solid rgba(255,255,255,.08);
+    flex-shrink: 0;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .mobile-nav-item {
+    flex: 1; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 3px;
+    padding: 8px 4px 10px;
+    background: none; border: none; cursor: pointer;
+    color: #7a9490; font-family: inherit; font-size: 10px;
+    letter-spacing: .02em; transition: color .12s;
+  }
+  .mobile-nav-item.active { color: var(--accent); }
+  .mobile-nav-item:active { opacity: .7; }
+  .mobile-nav-icon { font-size: 17px; line-height: 1; }
+
+  /* ---- views ---- */
+  .view { padding: 16px 14px 24px; }
+  .view-head { flex-direction: column; align-items: flex-start; gap: 12px; margin-bottom: 16px; }
+  .view-head h1 { font-size: 20px; }
+  .head-actions { width: 100%; }
+  .head-actions .btn { flex: 1; text-align: center; justify-content: center; }
+
+  /* ---- filter bar ---- */
+  .acct-filter-bar { padding: 8px 14px; }
+  .acct-filter-bar select { min-width: 0; flex: 1; }
+
+  /* ---- stat tiles ---- */
+  .stat-grid, .stat-grid.four { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .stat { padding: 12px 13px; }
+  .stat-value { font-size: 18px; }
+  .stat-value .num { font-size: 18px; }
+
+  /* ---- panels / tables ---- */
+  .panel-body.no-pad { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table.data { min-width: 560px; }
+  table.data thead th,
+  table.data tbody td { padding: 10px 12px; }
+
+  /* always show delete button on touch (no hover) */
+  .row-del { opacity: 1; }
+
+  /* ---- account grid ---- */
+  .acct-grid { grid-template-columns: 1fr; }
+
+  /* ---- modals → bottom sheet ---- */
+  .modal-backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .modal {
+    width: 100% !important;
+    max-width: 100% !important;
+    border-radius: 18px 18px 0 0;
+    max-height: 88vh;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* ---- forms ---- */
+  .form-row { flex-direction: column; gap: 0; }
+  .modal-actions { flex-direction: column-reverse; }
+  .modal-actions .btn { width: 100%; text-align: center; justify-content: center; }
+
+  /* ---- login ---- */
+  .login-card { border-radius: 0; border-left: none; border-right: none; max-width: 100%; padding: 32px 20px; }
+  .login-screen { align-items: flex-start; padding-top: 60px; }
+
+  /* ---- toolbar ---- */
+  .toolbar { flex-wrap: wrap; gap: 8px; }
+
+  /* ---- cols ---- */
+  .cols-2 { grid-template-columns: 1fr; }
+}
+
 /* ---- new instrument inline section ---- */
 .new-inst-section {
   border: 1px solid var(--border);
