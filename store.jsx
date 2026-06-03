@@ -7,9 +7,9 @@
 // ============================================================
 
 // ---- formatting helpers -----------------------------------
-const CCY_SYMBOL = { USD: "$", EUR: "€", GBP: "£", JPY: "¥", CHF: "CHF " };
+const CCY_SYMBOL = { CAD: "$", USD: "$", EUR: "€", GBP: "£", JPY: "¥", CHF: "CHF " };
 
-function fmtMoney(n, ccy = "USD", opts = {}) {
+function fmtMoney(n, ccy = "CAD", opts = {}) {
   if (n === null || n === undefined || isNaN(n)) return "—";
   const { sign = false, decimals = 2 } = opts;
   const neg = n < 0;
@@ -56,17 +56,17 @@ function uid(prefix = "id") {
 // units of a foreign currency priced in USD.
 const INSTRUMENTS = {
   // ETFs (priced in USD per share)
-  SPY: { name: "SPDR S&P 500 ETF", class: "ETF", quote: "USD", decimals: 2 },
-  QQQ: { name: "Invesco QQQ Trust", class: "ETF", quote: "USD", decimals: 2 },
-  VTI: { name: "Vanguard Total Market", class: "ETF", quote: "USD", decimals: 2 },
-  IEFA: { name: "iShares Core MSCI EAFE", class: "ETF", quote: "USD", decimals: 2 },
-  GLD: { name: "SPDR Gold Shares", class: "ETF", quote: "USD", decimals: 2 },
-  TLT: { name: "iShares 20+ Yr Treasury", class: "ETF", quote: "USD", decimals: 2 },
+  SPY: { name: "SPDR S&P 500 ETF", class: "ETF", quote: "CAD", decimals: 2 },
+  QQQ: { name: "Invesco QQQ Trust", class: "ETF", quote: "CAD", decimals: 2 },
+  VTI: { name: "Vanguard Total Market", class: "ETF", quote: "CAD", decimals: 2 },
+  IEFA: { name: "iShares Core MSCI EAFE", class: "ETF", quote: "CAD", decimals: 2 },
+  GLD: { name: "SPDR Gold Shares", class: "ETF", quote: "CAD", decimals: 2 },
+  TLT: { name: "iShares 20+ Yr Treasury", class: "ETF", quote: "CAD", decimals: 2 },
   // FX (units of base ccy priced in USD)
-  EUR: { name: "Euro", class: "FX", quote: "USD", decimals: 4 },
-  GBP: { name: "British Pound", class: "FX", quote: "USD", decimals: 4 },
-  JPY: { name: "Japanese Yen", class: "FX", quote: "USD", decimals: 6 },
-  CHF: { name: "Swiss Franc", class: "FX", quote: "USD", decimals: 4 },
+  EUR: { name: "Euro", class: "FX", quote: "CAD", decimals: 4 },
+  GBP: { name: "British Pound", class: "FX", quote: "CAD", decimals: 4 },
+  JPY: { name: "Japanese Yen", class: "FX", quote: "CAD", decimals: 6 },
+  CHF: { name: "Swiss Franc", class: "FX", quote: "CAD", decimals: 4 },
 };
 
 // ---- dev fixtures (seed data) --------------------------------
@@ -81,9 +81,9 @@ function seedState() {
   };
 
   const accounts = [
-    { id: "acc_alpha", name: "Alpha Macro", currency: "USD", broker: "Interactive Brokers" },
-    { id: "acc_beta", name: "Beta Equity", currency: "USD", broker: "Fidelity Prime" },
-    { id: "acc_fx", name: "FX Carry Desk", currency: "USD", broker: "Citi FX" },
+    { id: "acc_alpha", name: "Alpha Macro", currency: "CAD", broker: "Interactive Brokers" },
+    { id: "acc_beta", name: "Beta Equity", currency: "CAD", broker: "Fidelity Prime" },
+    { id: "acc_fx", name: "FX Carry Desk", currency: "CAD", broker: "Citi FX" },
   ];
 
   const cash = [

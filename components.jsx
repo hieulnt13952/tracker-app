@@ -4,13 +4,13 @@
 const { useState, useEffect, useRef, useMemo } = React;
 
 // Color a number green/red/neutral based on sign
-function PnL({ value, ccy = "USD", pct = false, decimals = 2, className = "", sign = true }) {
+function PnL({ value, ccy = "CAD", pct = false, decimals = 2, className = "", sign = true }) {
   const cls = value > 0 ? "pos" : value < 0 ? "neg" : "zero";
   const text = pct ? fmtPct(value, { sign }) : fmtMoney(value, ccy, { sign, decimals });
   return <span className={`mono num ${cls} ${className}`}>{text}</span>;
 }
 
-function Money({ value, ccy = "USD", decimals = 2, muted = false }) {
+function Money({ value, ccy = "CAD", decimals = 2, muted = false }) {
   return <span className={`mono num ${muted ? "muted" : ""}`}>{fmtMoney(value, ccy, { decimals })}</span>;
 }
 

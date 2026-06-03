@@ -32,7 +32,7 @@ function CashForm({ state, actions, onClose }) {
           {state.accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
         </select>
       </Field>
-      <Field label="Amount (USD)" hint={type === "withdraw" ? `Available cash: ${fmtMoney(available)}` : null}>
+      <Field label="Amount (CAD)" hint={type === "withdraw" ? `Available cash: ${fmtMoney(available)}` : null}>
         <input type="number" min="0" step="0.01" value={amount} placeholder="0.00"
           onChange={(e) => setAmount(e.target.value)} autoFocus />
       </Field>
@@ -128,7 +128,7 @@ function TradeForm({ state, actions, onClose }) {
           <input type="number" min="0" step="any" value={qty} placeholder="0"
             onChange={(e) => setQty(e.target.value)} autoFocus />
         </Field>
-        <Field label="Price (USD)">
+        <Field label="Price (CAD)">
           <input type="number" min="0" step="any" value={price} placeholder="0.00"
             onChange={(e) => setPrice(e.target.value)} />
         </Field>
@@ -177,7 +177,7 @@ function TransactionsView({ state, actions, accountFilter }) {
         kind: "trade", id: t.id, date: t.date, accountId: t.accountId, account: acctName(t.accountId),
         side: t.side, symbol: t.symbol, qty: t.qty, price: t.price, fee: t.fee,
         label: `${t.side === "buy" ? "Buy" : "Sell"} ${t.symbol}`,
-        detail: `${fmtNum(t.qty, 0)} @ ${fmtMoney(t.price, "USD", { decimals: INSTRUMENTS[t.symbol]?.decimals || 2 })}`,
+        detail: `${fmtNum(t.qty, 0)} @ ${fmtMoney(t.price, "CAD", { decimals: INSTRUMENTS[t.symbol]?.decimals || 2 })}`,
         amount: cashFlow,
       };
     });

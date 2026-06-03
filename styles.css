@@ -90,7 +90,7 @@ body {
 .reset-btn:hover { border-color: rgba(255,255,255,.25); color: #c7cdca; }
 
 .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
-.main-scroll { flex: 1; overflow-y: auto; }
+.main-scroll { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
 
 .acct-filter-bar {
   display: flex; align-items: center; gap: 10px;
@@ -269,6 +269,12 @@ table.data tr:hover .row-del { opacity: 1; }
 @media (max-width: 1080px) {
   .stat-grid, .stat-grid.four { grid-template-columns: repeat(2, 1fr); }
   .cols-2 { grid-template-columns: 1fr; }
+}
+
+/* ---- roadmap iframe ---- */
+.roadmap-frame {
+  width: 100%; height: 100%;
+  border: none; display: block;
 }
 
 /* ---- login screen ---- */

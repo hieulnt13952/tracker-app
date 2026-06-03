@@ -60,7 +60,7 @@ function AppShell({ currentUser, onLogout }) {
     },
     addAccount: ({ name, broker, funding }) => {
       const id = uid("acc");
-      const account = { id, name, broker, currency: "USD" };
+      const account = { id, name, broker, currency: "CAD" };
       db.insertAccount(account);
       update((s) => {
         s.accounts.push(account);
@@ -87,6 +87,7 @@ function AppShell({ currentUser, onLogout }) {
     { id: "accounts", label: "Accounts", icon: "▦" },
     { id: "transactions", label: "Transactions", icon: "⇄" },
     { id: "positions", label: "Positions & PnL", icon: "▤" },
+    { id: "roadmap", label: "Hieu's Roadmap", icon: "◎" },
   ];
 
   const go = (r) => { setRoute(r); setOpenAccount(null); };
@@ -174,6 +175,7 @@ function AppShell({ currentUser, onLogout }) {
           {route === "accounts" && openAccount && <AccountDetail state={state} actions={actions} accountId={openAccount} onBack={() => setOpenAccount(null)} />}
           {route === "transactions" && <TransactionsView state={state} actions={actions} accountFilter={accountFilter} />}
           {route === "positions" && <PositionsView state={state} actions={actions} accountFilter={accountFilter} />}
+          {route === "roadmap" && <iframe src="analytics-engineer-roadmap.html" className="roadmap-frame" title="Analytics Engineer Roadmap" />}
         </div>
       </main>
     </div>

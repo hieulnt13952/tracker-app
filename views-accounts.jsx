@@ -16,7 +16,7 @@ function AccountForm({ actions, onClose }) {
     <Modal title="New trading account" onClose={onClose}>
       <Field label="Account name"><input value={name} autoFocus placeholder="e.g. Global Macro" onChange={(e) => setName(e.target.value)} /></Field>
       <Field label="Broker / custodian"><input value={broker} placeholder="e.g. Interactive Brokers" onChange={(e) => setBroker(e.target.value)} /></Field>
-      <Field label="Opening cash deposit (USD)" hint="Optional — records an initial deposit">
+      <Field label="Opening cash deposit (CAD)" hint="Optional — records an initial deposit">
         <input type="number" min="0" step="0.01" value={funding} placeholder="0.00" onChange={(e) => setFunding(e.target.value)} />
       </Field>
       <div className="modal-actions">

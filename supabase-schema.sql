@@ -6,7 +6,7 @@
 create table if not exists accounts (
   id          text        primary key,
   name        text        not null,
-  currency    text        not null default 'USD',
+  currency    text        not null default 'CAD',
   broker      text,
   created_at  timestamptz not null default now()
 );
