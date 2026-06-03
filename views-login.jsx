@@ -31,8 +31,8 @@ function LoginView({ onLogin }) {
         <div className="login-brand">
           <div className="brand-mark" style={{ width: 44, height: 44, fontSize: 14 }}>Hieu</div>
           <div>
-            <div className="brand-name" style={{ color: "var(--text)", fontSize: 17 }}>Trading Book</div>
-            <div style={{ fontSize: 12, color: "var(--muted)" }}>Treasury &amp; Positions</div>
+            <div className="brand-name" style={{ color: "var(--text)", fontSize: 17 }}>Personal Tracker App</div>
+            <div style={{ fontSize: 12, color: "var(--muted)" }}>ETFs, Gold, Cryptocurrency &amp; more</div>
           </div>
         </div>
         <form onSubmit={submit} autoComplete="on">
