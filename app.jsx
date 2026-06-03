@@ -1,0 +1,172 @@
+// ============================================================
+//  app.jsx — shell, state management, navigation
+// ============================================================
+
+function App() {
+  // null = loading; populated once db.loadAll() resolves
+  const [state, setState] = useState(DEV_MODE ? seedState() : null);
+  const [dbError, setDbError] = useState(null);
+  const [route, setRoute] = useState("overview");
+  const [openAccount, setOpenAccount] = useState(null);
+  const [accountFilter, setAccountFilter] = useState("all");
+
+  // Initial load from Supabase (skipped in DEV_MODE — seedState() pre-fills above)
+  useEffect(() => {
+    if (DEV_MODE) return;
+    db.loadAll()
+      .then(setState)
+      .catch((e) => setDbError(e.message || String(e)));
+  }, []);
+
+  const update = (mutator) => setState((prev) => {
+    const next = JSON.parse(JSON.stringify(prev));
+    mutator(next);
+    return next;
+  });
+
+  const actions = useMemo(() => ({
+    addCash: (c) => {
+      const entry = { id: uid("c"), ...c };
+      update((s) => s.cash.push(entry));
+      db.insertCash(entry);
+    },
+    addTrade: (t) => {
+      const trade = { id: uid("t"), ...t };
+      update((s) => s.trades.push(trade));
+      db.insertTrade(trade);
+    },
+    deleteCash: (id) => {
+      update((s) => { s.cash = s.cash.filter((x) => x.id !== id); });
+      db.deleteCash(id);
+    },
+    deleteTrade: (id) => {
+      update((s) => { s.trades = s.trades.filter((x) => x.id !== id); });
+      db.deleteTrade(id);
+    },
+    setMark: (sym, price) => {
+      update((s) => { s.marks[sym] = price; });
+      db.upsertMark(sym, price);
+    },
+    addAccount: ({ name, broker, funding }) => {
+      const id = uid("acc");
+      const account = { id, name, broker, currency: "USD" };
+      db.insertAccount(account);
+      update((s) => {
+        s.accounts.push(account);
+        if (funding > 0) {
+          const cash = { id: uid("c"), accountId: id, type: "deposit", amount: funding, date: new Date().toISOString(), note: "Opening deposit" };
+          s.cash.push(cash);
+          db.insertCash(cash);
+        }
+      });
+    },
+    reset: () => {
+      if (DEV_MODE) {
+        setState(seedState());
+      } else {
+        db.loadAll().then(setState).catch((e) => setDbError(e.message || String(e)));
+      }
+      setRoute("overview");
+      setOpenAccount(null);
+    },
+  }), []);
+
+  const nav = [
+    { id: "overview", label: "Overview", icon: "◈" },
+    { id: "accounts", label: "Accounts", icon: "▦" },
+    { id: "transactions", label: "Transactions", icon: "⇄" },
+    { id: "positions", label: "Positions & PnL", icon: "▤" },
+  ];
+
+  const go = (r) => { setRoute(r); setOpenAccount(null); };
+
+  // ---- loading / error screens ----
+  if (dbError) {
+    return (
+      <div className="app" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ maxWidth: 440, padding: "2rem" }}>
+          <h2 style={{ marginBottom: "0.75rem" }}>Database connection failed</h2>
+          <p style={{ marginBottom: "0.5rem", color: "var(--fg-2)" }}>{dbError}</p>
+          <p style={{ fontSize: "0.85rem", color: "var(--fg-3)" }}>
+            Check <code>config.js</code> — make sure <code>SUPABASE_URL</code> and <code>SUPABASE_ANON_KEY</code> are set correctly.
+          </p>
+          <button className="btn primary" style={{ marginTop: "1.25rem" }}
+            onClick={() => { setDbError(null); db.loadAll().then(setState).catch((e) => setDbError(e.message || String(e))); }}>
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!state) {
+    return (
+      <div className="app" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ color: "var(--fg-2)" }}>Loading…</div>
+      </div>
+    );
+  }
+
+  const book = computeBook(state);
+  const showFilter = route === "transactions" || route === "positions";
+
+  return (
+    <div className="app">
+      {/* sidebar */}
+      <aside className="sidebar">
+        <div className="brand">
+          <div className="brand-mark">Hieu</div>
+          <div className="brand-text">
+            <div className="brand-name">Trading Book</div>
+            <div className="brand-sub">Treasury &amp; Positions</div>
+          </div>
+        </div>
+        <nav className="nav">
+          {nav.map((n) => (
+            <button key={n.id} className={`nav-item ${route === n.id ? "active" : ""}`} onClick={() => go(n.id)}>
+              <span className="nav-icon">{n.icon}</span>{n.label}
+            </button>
+          ))}
+        </nav>
+        <div className="sidebar-foot">
+          <div className="equity-mini">
+            <span className="lbl">Total equity</span>
+            <span className="val mono">{fmtMoney(book.total.equity)}</span>
+            <PnL value={book.total.totalPnl} />
+          </div>
+          {DEV_MODE ? (
+            <button className="reset-btn" onClick={() => { if (confirm("Reset to dev fixtures? This replaces your current view.")) actions.reset(); }}>
+              Reset sample data
+            </button>
+          ) : (
+            <button className="reset-btn" onClick={() => { if (confirm("Reload all data from the database?")) actions.reset(); }}>
+              Reload from DB
+            </button>
+          )}
+        </div>
+      </aside>
+
+      {/* main */}
+      <main className="main">
+        {showFilter && (
+          <div className="acct-filter-bar">
+            <span className="filter-lbl">Account</span>
+            <select value={accountFilter} onChange={(e) => setAccountFilter(e.target.value)}>
+              <option value="all">All accounts</option>
+              {state.accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+            </select>
+          </div>
+        )}
+        <div className="main-scroll">
+          {route === "overview" && <OverviewView state={state} />}
+          {route === "accounts" && !openAccount && <AccountsView state={state} actions={actions} onOpenAccount={setOpenAccount} />}
+          {route === "accounts" && openAccount && <AccountDetail state={state} actions={actions} accountId={openAccount} onBack={() => setOpenAccount(null)} />}
+          {route === "transactions" && <TransactionsView state={state} actions={actions} accountFilter={accountFilter} />}
+          {route === "positions" && <PositionsView state={state} actions={actions} accountFilter={accountFilter} />}
+        </div>
+      </main>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
