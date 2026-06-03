@@ -43,7 +43,7 @@ function fmtPct(n, opts = {}) {
 function fmtDate(iso) {
   if (!iso) return "—";
   const d = new Date(iso);
-  return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "2-digit" });
+  return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "2-digit", timeZone: "UTC" });
 }
 
 function uid(prefix = "id") {
