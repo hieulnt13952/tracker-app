@@ -1,5 +1,5 @@
 -- ============================================================
---  CES Trading Book — Supabase Schema
+--  Hieu Trading Book — Supabase Schema
 --  Run this in: Supabase Dashboard → SQL Editor → New query
 -- ============================================================
 
