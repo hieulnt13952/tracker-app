@@ -44,6 +44,7 @@ module.exports = async function handler(req, res) {
     // TradingView loads watchlist symbol + price data via XHR/fetch.
     // Capturing that JSON is far more reliable than scraping the DOM.
     const capturedPayloads = [];
+    let apiTotalCount = null; // totalCount advertised by TradingView's API
 
     page.on("response", async (response) => {
       try {
@@ -59,16 +60,28 @@ module.exports = async function handler(req, res) {
         ) return;
 
         const json = await response.json().catch(() => null);
-        if (json) capturedPayloads.push({ url, json });
+        if (!json) return;
+        capturedPayloads.push({ url, json });
+
+        // Capture the expected total so we know if we got everything
+        if (json.totalCount != null && apiTotalCount === null) {
+          apiTotalCount = json.totalCount;
+        }
       } catch (_) {}
     });
 
     // Navigate and wait for page + XHR to settle
     await page.goto(WATCHLIST_URL, { waitUntil: "networkidle2", timeout: 45000 });
-    await new Promise((r) => setTimeout(r, 5000));
+    await new Promise((r) => setTimeout(r, 8000)); // 8 s — TV loads in batches
 
     // ---- Try to extract symbols from captured API payloads -----------------
     let instruments = extractFromPayloads(capturedPayloads);
+
+    // If API told us the total and we're short, wait another 5 s and retry
+    if (apiTotalCount != null && instruments.length < apiTotalCount) {
+      await new Promise((r) => setTimeout(r, 5000));
+      instruments = extractFromPayloads(capturedPayloads);
+    }
 
     // ---- Fall back to DOM scraping if API interception got nothing ----------
     if (instruments.length === 0) {
@@ -102,7 +115,7 @@ module.exports = async function handler(req, res) {
               row.querySelector('[class*="symbolName"]') ||
               row.querySelector('[class*="symbol"]') ||
               Array.from(row.querySelectorAll("span")).find((el) =>
-                /^[A-Z0-9.]{1,7}$/.test(el.textContent.trim())
+                /^[A-Z0-9.:_-]{1,15}$/.test(el.textContent.trim())
               );
 
             const descEl =
@@ -115,7 +128,7 @@ module.exports = async function handler(req, res) {
               row.querySelector('[class*="last-price"]');
 
             const symbol = symEl?.textContent?.trim();
-            if (!symbol || !/^[A-Z0-9.]{1,7}$/.test(symbol)) continue;
+            if (!symbol || !/^[A-Z0-9.:_-]{1,15}$/.test(symbol)) continue;
 
             results.push({
               symbol,
@@ -166,6 +179,8 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({
       success: true,
       count: instruments.length,
+      totalExpected: apiTotalCount,   // null if TV didn't advertise a total
+      missing: apiTotalCount != null ? apiTotalCount - instruments.length : null,
       instruments,
     });
   } catch (err) {
