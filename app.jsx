@@ -101,6 +101,7 @@ function AppShell({ currentUser, onLogout }) {
     { id: "accounts",     label: "Accounts",        short: "Accounts", icon: "▦" },
     { id: "transactions", label: "Transactions",    short: "Trades",   icon: "⇄" },
     { id: "positions",    label: "Positions & PnL", short: "PnL",      icon: "▤" },
+    { id: "tradingview",  label: "TradingView",     short: "TV Sync",  icon: "⟳" },
     { id: "roadmap",      label: "Hieu's Roadmap",  short: "Roadmap",  icon: "◎" },
   ];
 
@@ -201,6 +202,7 @@ function AppShell({ currentUser, onLogout }) {
           {route === "accounts" && openAccount && <AccountDetail state={state} actions={actions} accountId={openAccount} onBack={() => setOpenAccount(null)} />}
           {route === "transactions" && <TransactionsView state={state} actions={actions} accountFilter={accountFilter} />}
           {route === "positions" && <PositionsView state={state} actions={actions} accountFilter={accountFilter} />}
+          {route === "tradingview" && <TradingViewSyncView />}
           {route === "roadmap" && <iframe src="analytics-engineer-roadmap.html" className="roadmap-frame" title="Analytics Engineer Roadmap" />}
         </div>
       </main>
