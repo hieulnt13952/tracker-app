@@ -77,8 +77,9 @@ function TradingViewSyncView() {
                   <th>#</th>
                   <th>Symbol</th>
                   <th>Name</th>
-                  <th className="r">Price (raw)</th>
-                  <th className="r">Price type</th>
+                  <th className="r">Price (parsed)</th>
+                  <th className="r">_priceRaw (DOM text)</th>
+                  <th className="r">simplewraps found</th>
                 </tr>
               </thead>
               <tbody>
@@ -90,8 +91,11 @@ function TradingViewSyncView() {
                     <td className="r mono">
                       {inst.price != null ? String(inst.price) : <span className="muted">null</span>}
                     </td>
-                    <td className="r" style={{ fontSize: 12, color: "var(--fg-3)" }}>
-                      {inst.price == null ? "—" : typeof inst.price}
+                    <td className="r mono" style={{ fontSize: 12, color: "var(--fg-3)" }}>
+                      {inst._priceRaw ?? <span className="muted">—</span>}
+                    </td>
+                    <td className="r mono" style={{ fontSize: 12, color: "var(--fg-3)" }}>
+                      {inst._simplewrapCount ?? "—"}
                     </td>
                   </tr>
                 ))}

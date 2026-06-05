@@ -40,129 +40,107 @@ module.exports = async function handler(req, res) {
     );
     await page.setViewport({ width: 1280, height: 900 });
 
-    // ---- Intercept TradingView's internal API responses ---------------------
-    // TradingView loads watchlist symbol + price data via XHR/fetch.
-    // Capturing that JSON is far more reliable than scraping the DOM.
-    const capturedPayloads = [];
-    let apiTotalCount = null; // totalCount advertised by TradingView's API
-
+    // Track totalCount from API responses (used only for the missing/expected fields)
+    let apiTotalCount = null;
     page.on("response", async (response) => {
       try {
-        const url = response.url();
         const ct = response.headers()["content-type"] || "";
         if (!ct.includes("application/json")) return;
-
-        // Only look at TradingView API domains
-        if (
-          !url.includes("tradingview.com") &&
-          !url.includes("pine-facade") &&
-          !url.includes("scanner.tradingview")
-        ) return;
-
         const json = await response.json().catch(() => null);
-        if (!json) return;
-        capturedPayloads.push({ url, json });
-
-        // Capture the expected total so we know if we got everything
-        if (json.totalCount != null && apiTotalCount === null) {
+        if (json?.totalCount != null && apiTotalCount === null) {
           apiTotalCount = json.totalCount;
         }
       } catch (_) {}
     });
 
-    // Navigate and wait for page + XHR to settle
+    // Navigate and wait for the quotesTable to render
     await page.goto(WATCHLIST_URL, { waitUntil: "networkidle2", timeout: 45000 });
-    await new Promise((r) => setTimeout(r, 8000)); // 8 s — TV loads in batches
 
-    // ---- Try to extract symbols from captured API payloads -----------------
-    let instruments = extractFromPayloads(capturedPayloads);
+    // Wait for the quotesTable to appear in the DOM
+    await page.waitForFunction(
+      () => !!document.querySelector('[class*="quotesTable"]'),
+      { timeout: 20000 }
+    ).catch(() => null); // don't throw if it never appears — we'll handle below
 
-    // If API told us the total and we're short, wait another 5 s and retry
-    if (apiTotalCount != null && instruments.length < apiTotalCount) {
-      await new Promise((r) => setTimeout(r, 5000));
-      instruments = extractFromPayloads(capturedPayloads);
-    }
+    // Extra buffer for all rows to render
+    await new Promise((r) => setTimeout(r, 4000));
 
-    // ---- Fall back to DOM scraping if API interception got nothing ----------
-    if (instruments.length === 0) {
-      instruments = await page.evaluate(() => {
-        const results = [];
+    // ---- Scrape quotesTable using simplewrap for last price ------------------
+    let instruments = await page.evaluate(() => {
+      function parsePrice(raw) {
+        if (!raw) return null;
+        // Strip everything except digits, dots, minus — handle "1,234.56"
+        const cleaned = raw.trim().replace(/,/g, "").replace(/[^\d.\-]/g, "");
+        const val = parseFloat(cleaned);
+        return isNaN(val) ? null : val;
+      }
 
-        function parsePrice(raw) {
-          if (!raw) return null;
-          const cleaned = raw.replace(/[^0-9.]/g, "");
-          const val = parseFloat(cleaned);
-          return isNaN(val) ? null : val;
-        }
+      const results = [];
 
-        // Try every selector pattern we know about
-        const rowSelectors = [
-          '[data-name="watchlist-item-row"]',
-          '[class*="watchlistRow"]',
-          '[class*="watchlist-row"]',
-          '[class*="symbolRow"]',
-          "tr[class*='row']",
-        ];
+      // The quotes table container
+      const table = document.querySelector('[class*="quotesTable"]');
+      if (!table) return { rows: results, debug: "quotesTable not found" };
 
-        for (const sel of rowSelectors) {
-          const rows = Array.from(document.querySelectorAll(sel));
-          if (rows.length === 0) continue;
+      // Each row in the table (skip pure header rows)
+      const rows = Array.from(table.querySelectorAll('[class*="listRow"], [class*="row"]'))
+        .filter((r) => !r.className.includes("header") && !r.className.includes("Head"));
 
-          for (const row of rows) {
-            // Symbol: short uppercase text
-            const symEl =
-              row.querySelector('[data-name="watchlist-item-symbol-name"]') ||
-              row.querySelector('[class*="symbolName"]') ||
-              row.querySelector('[class*="symbol"]') ||
-              Array.from(row.querySelectorAll("span")).find((el) =>
-                /^[A-Z0-9.:_-]{1,15}$/.test(el.textContent.trim())
-              );
+      for (const row of rows) {
+        // ---- Last price: first simplewrap in the row (first data column) ----
+        const simplewraps = Array.from(row.querySelectorAll('[class*="simplewrap"]'));
+        const priceEl = simplewraps[0] || null;
 
-            const descEl =
-              row.querySelector('[data-name="watchlist-item-description"]') ||
-              row.querySelector('[class*="description"]');
+        // ---- Symbol / ticker ------------------------------------------------
+        const symEl =
+          row.querySelector('[class*="tickerName"]') ||
+          row.querySelector('[class*="symbolName"]') ||
+          row.querySelector('[class*="ticker-"]') ||
+          row.querySelector('[class*="symbol-"]');
 
-            const priceEl =
-              row.querySelector('[data-name="last-price"]') ||
-              row.querySelector('[class*="lastPrice"]') ||
-              row.querySelector('[class*="last-price"]');
+        // ---- Description / company name -------------------------------------
+        const descEl =
+          row.querySelector('[class*="description"]') ||
+          row.querySelector('[class*="title"]');
 
-            const symbol = symEl?.textContent?.trim();
-            if (!symbol || !/^[A-Z0-9.:_-]{1,15}$/.test(symbol)) continue;
+        const symbol = symEl?.textContent?.trim();
+        if (!symbol) continue;
 
-            results.push({
-              symbol,
-              name: descEl?.textContent?.trim() || symbol,
-              price: parsePrice(priceEl?.textContent),
-            });
-          }
+        results.push({
+          symbol,
+          name: descEl?.textContent?.trim() || symbol,
+          price: parsePrice(priceEl?.textContent),
+          // debug fields — visible in the raw JSON on the TradingView page
+          _priceRaw: priceEl?.textContent?.trim() || null,
+          _simplewrapCount: simplewraps.length,
+        });
+      }
 
-          if (results.length > 0) break;
-        }
+      return { rows: results, debug: `found ${results.length} rows in quotesTable` };
+    });
 
-        return results;
-      });
-    }
+    // page.evaluate returns { rows, debug }
+    const debugInfo = instruments.debug || "";
+    instruments = instruments.rows || [];
 
-    // ---- If still empty, return debug info so we can diagnose --------------
+    // ---- If nothing found, return full diagnostics --------------------------
     if (instruments.length === 0) {
       const pageTitle = await page.title();
-      const pageUrl = page.url();
-      const bodySnippet = await page.evaluate(() =>
-        document.body?.innerHTML?.slice(0, 3000) || ""
-      );
-      const apiUrls = capturedPayloads.map((p) => p.url);
+      const pageUrl   = page.url();
+      const tableHTML = await page.evaluate(() => {
+        const t = document.querySelector('[class*="quotesTable"]');
+        return t ? t.outerHTML.slice(0, 5000) : "quotesTable element not found in DOM";
+      });
 
       return res.status(422).json({
-        error: "No instruments found.",
+        error: "No instruments found in quotesTable.",
         pageTitle,
         pageUrl,
-        apiUrlsCaptured: apiUrls,
-        bodySnippet,
+        debugInfo,
+        tableHTML,
       });
     }
 
-    // ---- Upsert instruments ------------------------------------------------
+    // ---- Upsert instruments -------------------------------------------------
     const instrRows = instruments.map((i) => ({
       symbol: i.symbol,
       name: i.name,
@@ -179,9 +157,9 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({
       success: true,
       count: instruments.length,
-      totalExpected: apiTotalCount,   // null if TV didn't advertise a total
+      totalExpected: apiTotalCount,
       missing: apiTotalCount != null ? apiTotalCount - instruments.length : null,
-      instruments,
+      instruments,   // includes _priceRaw and _simplewrapCount for debugging
     });
   } catch (err) {
     console.error("[sync-tradingview]", err);
@@ -192,53 +170,3 @@ module.exports = async function handler(req, res) {
     }
   }
 };
-
-// ---------------------------------------------------------------------------
-// Walk every captured API JSON payload and look for watchlist symbol data.
-// TradingView's internal API shapes vary; this handles the known ones.
-// ---------------------------------------------------------------------------
-function extractFromPayloads(payloads) {
-  const results = [];
-  const seen = new Set();
-
-  for (const { url, json } of payloads) {
-    const candidates = [];
-
-    // Shape 1: { symbols: ["AAPL", ...] }
-    if (Array.isArray(json?.symbols)) {
-      json.symbols.forEach((s) => {
-        if (typeof s === "string") candidates.push({ symbol: s.replace(/^.*:/, ""), name: s, price: null });
-        else if (s?.name) candidates.push({ symbol: s.name.replace(/^.*:/, ""), name: s.description || s.name, price: null });
-      });
-    }
-
-    // Shape 2: { data: [{ s: "NASDAQ:AAPL", d: [price, ...] }, ...] }
-    if (Array.isArray(json?.data)) {
-      json.data.forEach((row) => {
-        const sym = (row?.s || "").replace(/^.*:/, "");
-        if (!sym) return;
-        const price = Array.isArray(row?.d) ? (parseFloat(row.d[0]) || null) : null;
-        candidates.push({ symbol: sym, name: sym, price });
-      });
-    }
-
-    // Shape 3: array of objects with ticker/symbol field
-    if (Array.isArray(json)) {
-      json.forEach((item) => {
-        const sym = (item?.symbol || item?.ticker || item?.name || "").replace(/^.*:/, "");
-        if (sym && /^[A-Z0-9.]{1,10}$/.test(sym)) {
-          candidates.push({ symbol: sym, name: item?.description || sym, price: parseFloat(item?.price || item?.close) || null });
-        }
-      });
-    }
-
-    for (const c of candidates) {
-      if (c.symbol && !seen.has(c.symbol)) {
-        seen.add(c.symbol);
-        results.push(c);
-      }
-    }
-  }
-
-  return results;
-}
