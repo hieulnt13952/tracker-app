@@ -1,7 +1,8 @@
 // ============================================================
 //  store.jsx — data model, Supabase persistence, computation engine
 // ============================================================
-// State shape: { accounts, cash, trades, marks, ui }
+// State shape: { accounts, cash, trades, instruments, ui }
+// Mark prices live in instruments[symbol].last_price.
 // The engine derives positions, cash balances, mark-to-market
 // and PnL from the raw event lists (cash transactions + trades).
 // ============================================================
@@ -57,16 +58,16 @@ function uid(prefix = "id") {
 // Only used when Supabase is not configured (DEV_MODE = true).
 function seedInstruments() {
   return {
-    SPY:  { name: "SPDR S&P 500 ETF",        class: "ETF",    quote: "CAD", decimals: 2 },
-    QQQ:  { name: "Invesco QQQ Trust",         class: "ETF",    quote: "CAD", decimals: 2 },
-    VTI:  { name: "Vanguard Total Market",     class: "ETF",    quote: "CAD", decimals: 2 },
-    IEFA: { name: "iShares Core MSCI EAFE",    class: "ETF",    quote: "CAD", decimals: 2 },
-    GLD:  { name: "SPDR Gold Shares",          class: "ETF",    quote: "CAD", decimals: 2 },
-    TLT:  { name: "iShares 20+ Yr Treasury",   class: "ETF",    quote: "CAD", decimals: 2 },
-    EUR:  { name: "Euro",                       class: "FX",     quote: "CAD", decimals: 4 },
-    GBP:  { name: "British Pound",              class: "FX",     quote: "CAD", decimals: 4 },
-    JPY:  { name: "Japanese Yen",               class: "FX",     quote: "CAD", decimals: 6 },
-    CHF:  { name: "Swiss Franc",                class: "FX",     quote: "CAD", decimals: 4 },
+    SPY:  { name: "SPDR S&P 500 ETF",        decimals: 2, last_price: 552.4  },
+    QQQ:  { name: "Invesco QQQ Trust",         decimals: 2, last_price: 462.1  },
+    VTI:  { name: "Vanguard Total Market",     decimals: 2, last_price: 255.8  },
+    IEFA: { name: "iShares Core MSCI EAFE",    decimals: 2, last_price: 76.2   },
+    GLD:  { name: "SPDR Gold Shares",          decimals: 2, last_price: 224.6  },
+    TLT:  { name: "iShares 20+ Yr Treasury",   decimals: 2, last_price: 90.4   },
+    EUR:  { name: "Euro",                       decimals: 4, last_price: 1.0905 },
+    GBP:  { name: "British Pound",              decimals: 4, last_price: 1.2820 },
+    JPY:  { name: "Japanese Yen",               decimals: 6, last_price: 0.006610 },
+    CHF:  { name: "Swiss Franc",                decimals: 4, last_price: 1.1240 },
   };
 }
 
@@ -108,12 +109,7 @@ function seedState() {
     { id: uid("t"), accountId: "acc_fx", symbol: "JPY", side: "buy", qty: 5000000, price: 0.006750, date: daysAgo(35) },
   ];
 
-  const marks = {
-    SPY: 552.4, QQQ: 462.1, VTI: 255.8, IEFA: 76.2, GLD: 224.6, TLT: 90.4,
-    EUR: 1.0905, GBP: 1.2820, JPY: 0.006610, CHF: 1.1240,
-  };
-
-  return { accounts, cash, trades, marks, instruments: seedInstruments(), ui: { activeAccount: "all" } };
+  return { accounts, cash, trades, instruments: seedInstruments(), ui: { activeAccount: "all" } };
 }
 
 // ---- Supabase client ----------------------------------------
@@ -130,18 +126,16 @@ const db = {
   async loadAll() {
     if (DEV_MODE) return seedState();
 
-    const [acctRes, cashRes, tradeRes, markRes, instRes] = await Promise.all([
+    const [acctRes, cashRes, tradeRes, instRes] = await Promise.all([
       _supa.from("accounts").select("*").order("created_at"),
       _supa.from("cash_transactions").select("*").eq("deleted", false).order("date"),
       _supa.from("trades").select("*").eq("deleted", false).order("date"),
-      _supa.from("marks").select("*"),
       _supa.from("instruments").select("*").order("symbol"),
     ]);
 
     if (acctRes.error) throw acctRes.error;
     if (cashRes.error) throw cashRes.error;
     if (tradeRes.error) throw tradeRes.error;
-    if (markRes.error) throw markRes.error;
     if (instRes.error) throw instRes.error;
 
     const cash = (cashRes.data || []).map((r) => ({
@@ -152,18 +146,18 @@ const db = {
       id: r.id, accountId: r.account_id, symbol: r.symbol, side: r.side,
       qty: +r.qty, price: +r.price, date: r.date, createdBy: r.created_by,
     }));
-    const marks = {};
-    for (const m of markRes.data || []) marks[m.symbol] = +m.price;
     const instruments = {};
-    for (const r of instRes.data || []) instruments[r.symbol] = { name: r.name, class: r.class, quote: r.quote, decimals: r.decimals };
+    for (const r of instRes.data || []) {
+      instruments[r.symbol] = { name: r.name, decimals: r.decimals, last_price: r.last_price ? +r.last_price : null };
+    }
 
-    return { accounts: acctRes.data || [], cash, trades, marks, instruments, ui: { activeAccount: "all" } };
+    return { accounts: acctRes.data || [], cash, trades, instruments, ui: { activeAccount: "all" } };
   },
 
   async insertInstrument(inst) {
     if (DEV_MODE) return;
     const { error } = await _supa.from("instruments").insert({
-      symbol: inst.symbol, name: inst.name, class: inst.class, quote: inst.quote || "CAD", decimals: inst.decimals || 2,
+      symbol: inst.symbol, name: inst.name, decimals: inst.decimals || 2,
     });
     if (error) console.error("db.insertInstrument:", error.message);
   },
@@ -208,8 +202,9 @@ const db = {
 
   async upsertMark(symbol, price) {
     if (DEV_MODE) return;
-    const { error } = await _supa.from("marks")
-      .upsert({ symbol, price, updated_at: new Date().toISOString() }, { onConflict: "symbol" });
+    const { error } = await _supa.from("instruments")
+      .update({ last_price: price, updated_at: new Date().toISOString() })
+      .eq("symbol", symbol);
     if (error) console.error("db.upsertMark:", error.message);
   },
 
@@ -225,10 +220,6 @@ const db = {
     await _supa.from("trades").upsert(
       s.trades.map((t) => ({ id: t.id, account_id: t.accountId, symbol: t.symbol, side: t.side, qty: t.qty, price: t.price, date: t.date })),
       { onConflict: "id" }
-    );
-    await _supa.from("marks").upsert(
-      Object.entries(s.marks).map(([symbol, price]) => ({ symbol, price })),
-      { onConflict: "symbol" }
     );
   },
 
@@ -290,17 +281,17 @@ function computePositions(state, accountFilter = "all") {
     }
   }
 
-  // enrich with marks + unrealized
+  // enrich with last_price from instruments + unrealized
   const rows = Object.values(lots).map((L) => {
-    const mark = state.marks[L.symbol] ?? null;
+    const inst = (state.instruments || {})[L.symbol] || { name: L.symbol, decimals: 2, last_price: null };
+    const mark = inst.last_price ?? null;
     const mtm = mark !== null ? L.qty * mark : 0;
     const costValue = L.qty * L.avgCost;
     const unrealized = mark !== null ? (mark - L.avgCost) * L.qty : 0;
-    const inst = (state.instruments || {})[L.symbol] || { name: L.symbol, class: "—", decimals: 2 };
     return {
       ...L, mark, mtm, costValue, unrealized,
       totalPnl: L.realized + unrealized,
-      name: inst.name, class: inst.class, decimals: inst.decimals,
+      name: inst.name, decimals: inst.decimals,
       unrealizedPct: costValue !== 0 ? (unrealized / Math.abs(costValue)) * 100 : 0,
     };
   });

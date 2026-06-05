@@ -28,13 +28,9 @@ function MarkCell({ symbol, value, decimals, onCommit }) {
 }
 
 function PositionsView({ state, actions, accountFilter }) {
-  const [classFilter, setClassFilter] = useState("all");
-
   const rows = useMemo(() => {
-    let r = computePositions(state, accountFilter).filter((p) => p.qty !== 0);
-    if (classFilter !== "all") r = r.filter((p) => p.class === classFilter);
-    return r.sort((a, b) => b.mtm - a.mtm);
-  }, [state, accountFilter, classFilter]);
+    return computePositions(state, accountFilter).filter((p) => p.qty !== 0).sort((a, b) => b.mtm - a.mtm);
+  }, [state, accountFilter]);
 
   const acctName = (id) => state.accounts.find((a) => a.id === id)?.name || "—";
 
@@ -45,10 +41,8 @@ function PositionsView({ state, actions, accountFilter }) {
 
   // realized PnL also from fully-closed positions
   const realizedAll = useMemo(() => {
-    let r = computePositions(state, accountFilter);
-    if (classFilter !== "all") r = r.filter((p) => p.class === classFilter);
-    return r.reduce((s, p) => s + p.realized, 0);
-  }, [state, accountFilter, classFilter]);
+    return computePositions(state, accountFilter).reduce((s, p) => s + p.realized, 0);
+  }, [state, accountFilter]);
 
   return (
     <div className="view">
@@ -67,9 +61,6 @@ function PositionsView({ state, actions, accountFilter }) {
       </div>
 
       <div className="toolbar">
-        <Segmented value={classFilter} onChange={setClassFilter} options={[
-          { value: "all", label: "All" }, { value: "ETF", label: "ETFs" }, { value: "FX", label: "FX" },
-        ]} />
         <span className="toolbar-meta">{rows.length} open positions</span>
       </div>
 
@@ -90,7 +81,6 @@ function PositionsView({ state, actions, accountFilter }) {
                   <td>
                     <div className="asset-cell">
                       <span className="sym">{p.symbol}</span>
-                      <ClassBadge cls={p.class} />
                       <span className="sub-inline">{p.name}</span>
                     </div>
                   </td>

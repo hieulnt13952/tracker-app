@@ -62,8 +62,7 @@ function TradeForm({ state, actions, onClose }) {
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
 
   // new instrument fields — shown when symbol is not in state.instruments
-  const [instName, setInstName]       = useState("");
-  const [instClass, setInstClass]     = useState("Equity");
+  const [instName, setInstName]         = useState("");
   const [instDecimals, setInstDecimals] = useState("2");
 
   const sym = symbol.trim().toUpperCase();
@@ -79,7 +78,8 @@ function TradeForm({ state, actions, onClose }) {
 
   // pre-fill price with current mark on symbol change
   useEffect(() => {
-    if (state.marks[sym] != null) setPrice(String(state.marks[sym]));
+    const lp = state.instruments[sym]?.last_price;
+    if (lp != null) setPrice(String(lp));
   }, [sym]);
 
   // current holding of this symbol in this account
@@ -95,7 +95,7 @@ function TradeForm({ state, actions, onClose }) {
   const submit = () => {
     if (!valid) return;
     if (isNew) {
-      actions.addInstrument({ symbol: sym, name: instName.trim(), class: instClass, quote: "CAD", decimals: parseInt(instDecimals) || 2 });
+      actions.addInstrument({ symbol: sym, name: instName.trim(), decimals: parseInt(instDecimals) || 2 });
     }
     actions.addTrade({ accountId, symbol: sym, side, qty: q, price: p, date: new Date(date).toISOString() });
     onClose();
@@ -133,16 +133,6 @@ function TradeForm({ state, actions, onClose }) {
             <Field label="Name">
               <input type="text" value={instName} placeholder="e.g. Apple Inc." onChange={(e) => setInstName(e.target.value)} />
             </Field>
-            <Field label="Asset class">
-              <select value={instClass} onChange={(e) => setInstClass(e.target.value)}>
-                <option>Equity</option>
-                <option>ETF</option>
-                <option>Crypto</option>
-                <option>FX</option>
-                <option>Bond</option>
-                <option>Commodity</option>
-              </select>
-            </Field>
             <Field label="Decimals">
               <select value={instDecimals} onChange={(e) => setInstDecimals(e.target.value)}>
                 <option value="0">0</option>
@@ -156,7 +146,7 @@ function TradeForm({ state, actions, onClose }) {
       )}
 
       <div className="form-row">
-        <Field label={inst?.class === "FX" ? "Units" : "Quantity"}
+        <Field label="Quantity"
           hint={side === "sell" ? `Holding: ${fmtNum(holding, 0)}` : null}>
           <input type="number" min="0" step="any" value={qty} placeholder="0"
             onChange={(e) => setQty(e.target.value)} />

@@ -55,11 +55,14 @@ function AppShell({ currentUser, onLogout }) {
       db.softDeleteTrade(id);
     },
     setMark: (sym, price) => {
-      update((s) => { s.marks[sym] = price; });
+      update((s) => {
+        if (!s.instruments[sym]) s.instruments[sym] = { name: sym, decimals: 2, last_price: price };
+        else s.instruments[sym].last_price = price;
+      });
       db.upsertMark(sym, price);
     },
     addInstrument: (inst) => {
-      update((s) => { s.instruments[inst.symbol] = { name: inst.name, class: inst.class, quote: inst.quote || "CAD", decimals: inst.decimals || 2 }; });
+      update((s) => { s.instruments[inst.symbol] = { name: inst.name, decimals: inst.decimals || 2, last_price: null }; });
       db.insertInstrument(inst);
     },
     transferFunds: ({ fromId, fromName, toId, toName, amount, date, note }) => {

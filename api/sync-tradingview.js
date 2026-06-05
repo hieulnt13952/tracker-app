@@ -163,26 +163,9 @@ module.exports = async function handler(req, res) {
 
     if (instrErr) throw new Error(`instruments upsert: ${instrErr.message}`);
 
-    // ---- Also update marks so MTM pricing picks up immediately -------------
-    const markRows = instruments
-      .filter((i) => i.price != null && i.price > 0)
-      .map((i) => ({
-        symbol: i.symbol,
-        price: i.price,
-        updated_at: new Date().toISOString(),
-      }));
-
-    if (markRows.length > 0) {
-      const { error: marksErr } = await supabase
-        .from("marks")
-        .upsert(markRows, { onConflict: "symbol" });
-      if (marksErr) throw new Error(`marks upsert: ${marksErr.message}`);
-    }
-
     return res.status(200).json({
       success: true,
       count: instruments.length,
-      pricesUpdated: markRows.length,
       instruments,
     });
   } catch (err) {

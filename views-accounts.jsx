@@ -188,7 +188,7 @@ function AccountDetail({ state, actions, accountId, onBack }) {
             <tbody>
               {s.openPositions.sort((a, b) => b.mtm - a.mtm).map((p) => (
                 <tr key={p.symbol}>
-                  <td><span className="sym">{p.symbol}</span> <ClassBadge cls={p.class} /> <span className="sub-inline">{p.name}</span></td>
+                  <td><span className="sym">{p.symbol}</span> <span className="sub-inline">{p.name}</span></td>
                   <td className="r mono">{fmtNum(p.qty, 0)}</td>
                   <td className="r mono muted">{fmtNum(p.avgCost, p.decimals)}</td>
                   <td className="r mono">{fmtNum(p.mark, p.decimals)}</td>

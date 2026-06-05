@@ -55,22 +55,12 @@ function OverviewView({ state }) {
     const all = computePositions(state, "all").filter((p) => p.qty !== 0);
     const map = {};
     for (const p of all) {
-      if (!map[p.symbol]) map[p.symbol] = { symbol: p.symbol, class: p.class, name: p.name, mtm: 0, unrealized: 0 };
+      if (!map[p.symbol]) map[p.symbol] = { symbol: p.symbol, name: p.name, mtm: 0, unrealized: 0 };
       map[p.symbol].mtm += p.mtm;
       map[p.symbol].unrealized += p.unrealized;
     }
     return Object.values(map).sort((a, b) => b.mtm - a.mtm);
   }, [state]);
-
-  const classAlloc = useMemo(() => {
-    const map = {};
-    for (const s of bySymbol) {
-      map[s.class] = (map[s.class] || 0) + s.mtm;
-    }
-    return Object.entries(map).map(([label, value], i) => ({
-      label, value, color: label === "FX" ? "#3f6fb0" : label === "ETF" ? "#2f6f6b" : PALETTE[i],
-    }));
-  }, [bySymbol]);
 
   const cashAlloc = [
     { label: "Cash", value: total.cash, color: "#b0823f" },
@@ -122,17 +112,6 @@ function OverviewView({ state }) {
                 ))}
               </div>
             </div>
-            <div className="alloc-block">
-              <div className="alloc-cap">By asset class</div>
-              <AllocBar segments={classAlloc} />
-              <div className="legend">
-                {classAlloc.map((s) => (
-                  <span key={s.label} className="legend-item">
-                    <i style={{ background: s.color }} />{s.label} <b className="mono">{fmtMoney(s.value)}</b>
-                  </span>
-                ))}
-              </div>
-            </div>
           </div>
         </section>
 
@@ -142,13 +121,12 @@ function OverviewView({ state }) {
           <div className="panel-body no-pad">
             <table className="data">
               <thead>
-                <tr><th>Asset</th><th></th><th className="r">Mkt Value</th><th className="r">Unreal. PnL</th></tr>
+                <tr><th>Asset</th><th className="r">Mkt Value</th><th className="r">Unreal. PnL</th></tr>
               </thead>
               <tbody>
                 {bySymbol.slice(0, 6).map((s) => (
                   <tr key={s.symbol}>
                     <td><span className="sym">{s.symbol}</span> <span className="sub-inline">{s.name}</span></td>
-                    <td><ClassBadge cls={s.class} /></td>
                     <td className="r"><Money value={s.mtm} /></td>
                     <td className="r"><PnL value={s.unrealized} /></td>
                   </tr>

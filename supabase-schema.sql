@@ -36,19 +36,13 @@ create table if not exists trades (
   deleted     boolean     not null default false
 );
 
-create table if not exists marks (
-  symbol      text        primary key,
-  price       numeric     not null check (price > 0),
-  updated_at  timestamptz not null default now()
-);
-
 -- ---- Instruments -----------------------------------------------
 create table if not exists instruments (
-  symbol    text  primary key,
-  name      text  not null,
-  class     text  not null default 'Equity',
-  quote     text  not null default 'CAD',
-  decimals  int   not null default 2
+  symbol     text        primary key,
+  name       text        not null,
+  decimals   int         not null default 2,
+  last_price numeric,
+  updated_at timestamptz default now()
 );
 
 alter table instruments disable row level security;
@@ -96,5 +90,22 @@ grant execute on function login to anon;
 alter table accounts          disable row level security;
 alter table cash_transactions disable row level security;
 alter table trades            disable row level security;
-alter table marks             disable row level security;
 alter table users             disable row level security;
+
+-- ============================================================
+--  MIGRATION — run this if you already have a live database
+--  (safe to run multiple times — uses IF EXISTS / IF NOT EXISTS)
+-- ============================================================
+
+-- 1. Drop the marks table (prices now live in instruments.last_price)
+drop table if exists marks;
+
+-- 2. Remove class and quote columns from instruments
+alter table instruments
+  drop column if exists class,
+  drop column if exists quote;
+
+-- 3. Add last_price and updated_at to instruments
+alter table instruments
+  add column if not exists last_price numeric,
+  add column if not exists updated_at timestamptz default now();
