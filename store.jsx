@@ -47,6 +47,16 @@ function fmtDate(iso) {
   return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "2-digit", timeZone: "UTC" });
 }
 
+function fmtDateTimeEST(iso) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return d.toLocaleString("en-US", {
+    month: "short", day: "2-digit", year: "numeric",
+    hour: "2-digit", minute: "2-digit", hour12: true,
+    timeZone: "America/New_York",
+  });
+}
+
 function uid(prefix = "id") {
   return prefix + "_" + Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4);
 }
@@ -369,7 +379,7 @@ function computeBook(state) {
 // expose globally for the babel-scoped component files
 Object.assign(window, {
   CCY_SYMBOL, DEV_MODE,
-  fmtMoney, fmtNum, fmtPct, fmtDate, uid,
+  fmtMoney, fmtNum, fmtPct, fmtDate, fmtDateTimeEST, uid,
   seedState, db,
   computePositions, computeCash, computeAccountSummary, computeBook,
 });

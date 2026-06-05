@@ -178,6 +178,12 @@ function TradeForm({ state, actions, onClose }) {
 function TransactionsView({ state, actions, accountFilter }) {
   const [modal, setModal] = useState(null); // 'cash' | 'trade'
   const [tab, setTab] = useState("all"); // all | trades | cash
+  const [symFilter, setSymFilter] = useState("all");
+
+  // sorted list of unique symbols for the instrument filter dropdown
+  const tradeSymbols = useMemo(() => {
+    return [...new Set(state.trades.map((t) => t.symbol))].sort();
+  }, [state.trades]);
 
   // build unified activity feed
   const feed = useMemo(() => {
@@ -203,9 +209,11 @@ function TransactionsView({ state, actions, accountFilter }) {
     let all = [...cashRows, ...tradeRows];
     if (accountFilter !== "all") all = all.filter((r) => r.accountId === accountFilter);
     if (tab === "trades") all = all.filter((r) => r.kind === "trade");
-    if (tab === "cash") all = all.filter((r) => r.kind === "cash");
+    if (tab === "cash")   all = all.filter((r) => r.kind === "cash");
+    // when filtering by instrument show only trades for that symbol
+    if (symFilter !== "all") all = all.filter((r) => r.kind === "trade" && r.symbol === symFilter);
     return all.sort((a, b) => new Date(b.date) - new Date(a.date));
-  }, [state, accountFilter, tab]);
+  }, [state, accountFilter, tab, symFilter]);
 
   return (
     <div className="view">
@@ -224,37 +232,77 @@ function TransactionsView({ state, actions, accountFilter }) {
         <Segmented value={tab} onChange={setTab} options={[
           { value: "all", label: "All" }, { value: "trades", label: "Trades" }, { value: "cash", label: "Cash" },
         ]} />
+        <select value={symFilter} onChange={(e) => setSymFilter(e.target.value)}
+          style={{ marginLeft: 8 }}>
+          <option value="all">All instruments</option>
+          {tradeSymbols.map((s) => <option key={s} value={s}>{s}</option>)}
+        </select>
         <span className="toolbar-meta">{feed.length} entries</span>
       </div>
 
       <section className="panel">
         <div className="panel-body no-pad">
           <table className="data">
-            <thead>
-              <tr>
-                <th>Date</th><th>Type</th><th>Account</th><th>Detail</th>
-                <th className="r">Cash impact</th><th>By</th><th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {feed.map((r) => (
-                <tr key={r.id}>
-                  <td className="muted nowrap">{fmtDate(r.date)}</td>
-                  <td><SideBadge side={r.side} /> {r.kind === "trade" && <span className="sym sm">{r.symbol}</span>}</td>
-                  <td>{r.account}</td>
-                  <td className="muted">{r.detail}</td>
-                  <td className="r"><PnL value={r.amount} /></td>
-                  <td className="muted" style={{ fontSize: 12 }}>{r.createdBy}</td>
-                  <td className="r">
-                    <button className="row-del" title="Delete"
-                      onClick={() => { if (confirm("Delete this entry?")) r.kind === "cash" ? actions.deleteCash(r.id) : actions.deleteTrade(r.id); }}>
-                      ✕
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {feed.length === 0 && <tr><td colSpan={7}><Empty title="No transactions yet" sub="Record a cash deposit or a trade to get started." /></td></tr>}
-            </tbody>
+            {tab === "trades" ? (
+              <>
+                <thead>
+                  <tr>
+                    <th>Date</th><th>Side</th><th>Symbol</th>
+                    <th className="r">Qty</th><th className="r">Price</th>
+                    <th>Account</th><th className="r">Cash impact</th><th>By</th><th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {feed.map((r) => (
+                    <tr key={r.id}>
+                      <td className="muted nowrap">{fmtDate(r.date)}</td>
+                      <td><SideBadge side={r.side} /></td>
+                      <td><span className="sym">{r.symbol}</span></td>
+                      <td className="r mono">{fmtNum(r.qty, 0)}</td>
+                      <td className="r mono">{fmtMoney(r.price, "CAD", { decimals: (state.instruments || {})[r.symbol]?.decimals || 2 })}</td>
+                      <td>{r.account}</td>
+                      <td className="r"><PnL value={r.amount} /></td>
+                      <td className="muted" style={{ fontSize: 12 }}>{r.createdBy}</td>
+                      <td className="r">
+                        <button className="row-del" title="Delete"
+                          onClick={() => { if (confirm("Delete this entry?")) actions.deleteTrade(r.id); }}>
+                          ✕
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {feed.length === 0 && <tr><td colSpan={9}><Empty title="No trades" sub="Record a trade to get started." /></td></tr>}
+                </tbody>
+              </>
+            ) : (
+              <>
+                <thead>
+                  <tr>
+                    <th>Date</th><th>Type</th><th>Account</th><th>Detail</th>
+                    <th className="r">Cash impact</th><th>By</th><th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {feed.map((r) => (
+                    <tr key={r.id}>
+                      <td className="muted nowrap">{fmtDate(r.date)}</td>
+                      <td><SideBadge side={r.side} /> {r.kind === "trade" && <span className="sym sm">{r.symbol}</span>}</td>
+                      <td>{r.account}</td>
+                      <td className="muted">{r.detail}</td>
+                      <td className="r"><PnL value={r.amount} /></td>
+                      <td className="muted" style={{ fontSize: 12 }}>{r.createdBy}</td>
+                      <td className="r">
+                        <button className="row-del" title="Delete"
+                          onClick={() => { if (confirm("Delete this entry?")) r.kind === "cash" ? actions.deleteCash(r.id) : actions.deleteTrade(r.id); }}>
+                          ✕
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {feed.length === 0 && <tr><td colSpan={7}><Empty title="No transactions yet" sub="Record a cash deposit or a trade to get started." /></td></tr>}
+                </tbody>
+              </>
+            )}
           </table>
         </div>
       </section>

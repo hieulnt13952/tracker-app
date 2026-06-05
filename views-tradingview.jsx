@@ -114,7 +114,7 @@ function TradingViewSyncView({ state, onRefresh }) {
                   </td>
                   <td className="r mono muted">{inst.decimals ?? 2}</td>
                   <td className="muted" style={{ fontSize: 12 }}>
-                    {inst.updated_at ? fmtDate(inst.updated_at) : "—"}
+                    {inst.updated_at ? fmtDateTimeEST(inst.updated_at) : "—"}
                   </td>
                 </tr>
               ))}
