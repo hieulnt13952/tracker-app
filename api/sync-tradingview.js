@@ -40,103 +40,73 @@ module.exports = async function handler(req, res) {
     );
     await page.setViewport({ width: 1280, height: 900 });
 
-    // Track totalCount from API responses (used only for the missing/expected fields)
-    let apiTotalCount = null;
-    page.on("response", async (response) => {
-      try {
-        const ct = response.headers()["content-type"] || "";
-        if (!ct.includes("application/json")) return;
-        const json = await response.json().catch(() => null);
-        if (json?.totalCount != null && apiTotalCount === null) {
-          apiTotalCount = json.totalCount;
-        }
-      } catch (_) {}
-    });
-
-    // Navigate and wait for the quotesTable to render
     await page.goto(WATCHLIST_URL, { waitUntil: "networkidle2", timeout: 45000 });
 
-    // Wait for the quotesTable to appear in the DOM
+    // Wait until at least one listItem row exists in the DOM
     await page.waitForFunction(
-      () => !!document.querySelector('[class*="quotesTable"]'),
+      () => document.querySelectorAll('[data-qa-id="column-symbol"]').length > 0,
       { timeout: 20000 }
-    ).catch(() => null); // don't throw if it never appears — we'll handle below
+    ).catch(() => null);
 
-    // Extra buffer for all rows to render
-    await new Promise((r) => setTimeout(r, 4000));
+    // Small buffer for all rows to paint
+    await new Promise((r) => setTimeout(r, 3000));
 
-    // ---- Scrape quotesTable using simplewrap for last price ------------------
-    let instruments = await page.evaluate(() => {
+    // ---- Scrape using the stable data-qa-id attributes ----------------------
+    const instruments = await page.evaluate(() => {
       function parsePrice(raw) {
         if (!raw) return null;
-        // Strip everything except digits, dots, minus — handle "1,234.56"
+        // Remove thousands separators and any non-numeric chars except dot and minus
         const cleaned = raw.trim().replace(/,/g, "").replace(/[^\d.\-]/g, "");
         const val = parseFloat(cleaned);
         return isNaN(val) ? null : val;
       }
 
+      // Each watchlist row is a div[class*="listItem-"]
+      const rows = Array.from(document.querySelectorAll('[class*="listItem-"]'));
       const results = [];
 
-      // The quotes table container
-      const table = document.querySelector('[class*="quotesTable"]');
-      if (!table) return { rows: results, debug: "quotesTable not found" };
-
-      // Each row in the table (skip pure header rows)
-      const rows = Array.from(table.querySelectorAll('[class*="listRow"], [class*="row"]'))
-        .filter((r) => !r.className.includes("header") && !r.className.includes("Head"));
-
       for (const row of rows) {
-        // ---- Last price: first simplewrap in the row (first data column) ----
-        const simplewraps = Array.from(row.querySelectorAll('[class*="simplewrap"]'));
-        const priceEl = simplewraps[0] || null;
+        // ---- Symbol cell (data-qa-id is added by TV for automation) ---------
+        const symbolCell = row.querySelector('[data-qa-id="column-symbol"]');
+        if (!symbolCell) continue;
 
-        // ---- Symbol / ticker ------------------------------------------------
-        const symEl =
-          row.querySelector('[class*="tickerName"]') ||
-          row.querySelector('[class*="symbolName"]') ||
-          row.querySelector('[class*="ticker-"]') ||
-          row.querySelector('[class*="symbol-"]');
+        // Ticker text lives inside <a><span class="symbol-...">BTCUSD</span></a>
+        const symbolEl = symbolCell.querySelector('a span[class*="symbol-"]');
+        // Description sits beside the link
+        const descEl = symbolCell.querySelector('span[class*="description-"]');
 
-        // ---- Description / company name -------------------------------------
-        const descEl =
-          row.querySelector('[class*="description"]') ||
-          row.querySelector('[class*="title"]');
+        // ---- Last price cell ------------------------------------------------
+        const priceCell = row.querySelector('[data-qa-id="column-last_price"]');
+        // First value span is the price number; second is the currency label
+        const priceEl = priceCell ? priceCell.querySelector('span[class*="value-"]') : null;
 
-        const symbol = symEl?.textContent?.trim();
+        const symbol = symbolEl?.textContent?.trim();
         if (!symbol) continue;
 
         results.push({
           symbol,
           name: descEl?.textContent?.trim() || symbol,
           price: parsePrice(priceEl?.textContent),
-          // debug fields — visible in the raw JSON on the TradingView page
-          _priceRaw: priceEl?.textContent?.trim() || null,
-          _simplewrapCount: simplewraps.length,
+          _priceRaw: priceEl?.textContent?.trim() ?? null,
         });
       }
 
-      return { rows: results, debug: `found ${results.length} rows in quotesTable` };
+      return results;
     });
 
-    // page.evaluate returns { rows, debug }
-    const debugInfo = instruments.debug || "";
-    instruments = instruments.rows || [];
-
-    // ---- If nothing found, return full diagnostics --------------------------
+    // ---- If nothing found return diagnostics --------------------------------
     if (instruments.length === 0) {
       const pageTitle = await page.title();
       const pageUrl   = page.url();
-      const tableHTML = await page.evaluate(() => {
-        const t = document.querySelector('[class*="quotesTable"]');
-        return t ? t.outerHTML.slice(0, 5000) : "quotesTable element not found in DOM";
-      });
-
+      // Return a small slice of the body so we can see what rendered
+      const bodySnippet = await page.evaluate(() =>
+        document.body?.innerHTML?.slice(0, 4000) || ""
+      );
       return res.status(422).json({
-        error: "No instruments found in quotesTable.",
+        error: "No rows found. The page may not have rendered or the URL requires login.",
         pageTitle,
         pageUrl,
-        debugInfo,
-        tableHTML,
+        bodySnippet,
       });
     }
 
@@ -157,9 +127,7 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({
       success: true,
       count: instruments.length,
-      totalExpected: apiTotalCount,
-      missing: apiTotalCount != null ? apiTotalCount - instruments.length : null,
-      instruments,   // includes _priceRaw and _simplewrapCount for debugging
+      instruments, // includes _priceRaw for verification in the TradingView page
     });
   } catch (err) {
     console.error("[sync-tradingview]", err);
