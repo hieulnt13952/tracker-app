@@ -4,9 +4,9 @@
 // POST /api/sync-tradingview
 //
 // Required env vars (set in Vercel dashboard):
-//   SUPABASE_URL              — your Supabase project URL
-//   SUPABASE_SERVICE_ROLE_KEY — service role key (never sent to the browser)
-//   BROWSERLESS_TOKEN         — API token from https://browserless.io
+//   SUPABASE_URL          — your Supabase project URL
+//   SUPABASE_ANON_KEY     — your Supabase anon/public key (RLS is disabled so this is fine)
+//   BROWSERLESS_TOKEN     — API token from https://browserless.io
 //
 // Timeout: up to 60 s (hobby plan). Set VERCEL_FUNCTION_MAX_DURATION=60 in
 // vercel.json (already done) or upgrade to Pro for up to 300 s.
@@ -23,15 +23,15 @@ module.exports = async function handler(req, res) {
   }
 
   // Validate env vars early so errors are clear
-  const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, BROWSERLESS_TOKEN } = process.env;
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    return res.status(500).json({ error: "Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY env var" });
+  const { SUPABASE_URL, SUPABASE_ANON_KEY, BROWSERLESS_TOKEN } = process.env;
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    return res.status(500).json({ error: "Missing SUPABASE_URL or SUPABASE_ANON_KEY env var" });
   }
   if (!BROWSERLESS_TOKEN) {
     return res.status(500).json({ error: "Missing BROWSERLESS_TOKEN env var" });
   }
 
-  const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   let browser;
   try {
