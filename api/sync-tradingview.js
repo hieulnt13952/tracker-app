@@ -110,8 +110,10 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    // ---- Upsert all instruments: insert new symbols, update price on existing -
     const now = new Date().toISOString();
+    const month = now.slice(0, 7); // "YYYY-MM"
+
+    // ---- Upsert all instruments: insert new symbols, update price on existing -
     const { error: instrErr } = await supabase
       .from("instruments")
       .upsert(
@@ -125,10 +127,30 @@ module.exports = async function handler(req, res) {
       );
     if (instrErr) throw new Error(`instruments upsert: ${instrErr.message}`);
 
+    // ---- Increment sync usage counter for this month ------------------------
+    const { data: usageRow } = await supabase
+      .from("sync_usage")
+      .select("refresh_count, limit_count")
+      .eq("month", month)
+      .single();
+
+    const limitCount    = usageRow?.limit_count   ?? 1000;
+    const refreshCount  = (usageRow?.refresh_count ?? 0) + 1;
+
+    await supabase
+      .from("sync_usage")
+      .upsert({ month, limit_count: limitCount, refresh_count: refreshCount }, { onConflict: "month" });
+
     return res.status(200).json({
       success: true,
       count: instruments.length,
       instruments,
+      usage: {
+        month,
+        limit_count:   limitCount,
+        refresh_count: refreshCount,
+        remaining:     limitCount - refreshCount,
+      },
     });
   } catch (err) {
     console.error("[sync-tradingview]", err);

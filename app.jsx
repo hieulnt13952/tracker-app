@@ -202,7 +202,12 @@ function AppShell({ currentUser, onLogout }) {
           {route === "accounts" && openAccount && <AccountDetail state={state} actions={actions} accountId={openAccount} onBack={() => setOpenAccount(null)} />}
           {route === "transactions" && <TransactionsView state={state} actions={actions} accountFilter={accountFilter} />}
           {route === "positions" && <PositionsView state={state} actions={actions} accountFilter={accountFilter} />}
-          {route === "tradingview" && <TradingViewSyncView state={state} />}
+          {route === "tradingview" && (
+            <TradingViewSyncView
+              state={state}
+              onRefresh={() => db.loadAll().then(setState).catch((e) => setDbError(e.message || String(e)))}
+            />
+          )}
           {route === "roadmap" && <iframe src="analytics-engineer-roadmap.html" className="roadmap-frame" title="Analytics Engineer Roadmap" />}
         </div>
       </main>

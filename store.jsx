@@ -148,7 +148,7 @@ const db = {
     }));
     const instruments = {};
     for (const r of instRes.data || []) {
-      instruments[r.symbol] = { name: r.name, decimals: r.decimals, last_price: r.last_price ? +r.last_price : null };
+      instruments[r.symbol] = { name: r.name, decimals: r.decimals, last_price: r.last_price ? +r.last_price : null, updated_at: r.updated_at || null };
     }
 
     return { accounts: acctRes.data || [], cash, trades, instruments, ui: { activeAccount: "all" } };
@@ -221,6 +221,14 @@ const db = {
       s.trades.map((t) => ({ id: t.id, account_id: t.accountId, symbol: t.symbol, side: t.side, qty: t.qty, price: t.price, date: t.date })),
       { onConflict: "id" }
     );
+  },
+
+  async loadSyncUsage() {
+    if (DEV_MODE) return { month: "dev", limit_count: 1000, refresh_count: 0, remaining: 1000 };
+    const month = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+    const { data } = await _supa.from("sync_usage").select("*").eq("month", month).single();
+    const row = data || { month, limit_count: 1000, refresh_count: 0 };
+    return { ...row, remaining: row.limit_count - row.refresh_count };
   },
 
   // Verifies credentials via the login() Postgres RPC.

@@ -47,6 +47,15 @@ create table if not exists instruments (
 
 alter table instruments disable row level security;
 
+-- ---- Sync usage (tracks Browserless calls per month) ----------
+create table if not exists sync_usage (
+  month         text  primary key,   -- "YYYY-MM", e.g. "2026-06"
+  limit_count   int   not null default 1000,
+  refresh_count int   not null default 0
+);
+
+alter table sync_usage disable row level security;
+
 -- ---- Users table (for login) ---------------------------------
 -- Passwords are bcrypt-hashed via pgcrypto — never stored in plain text.
 

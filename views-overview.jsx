@@ -2,50 +2,6 @@
 //  views-overview.jsx — book-level dashboard
 // ============================================================
 
-function SyncTradingViewButton() {
-  const [status, setStatus] = useState("idle"); // idle | loading | ok | error
-  const [msg, setMsg] = useState("");
-
-  async function handleSync() {
-    setStatus("loading");
-    setMsg("");
-    try {
-      const res = await fetch("/api/sync-tradingview", { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Sync failed");
-      setStatus("ok");
-      setMsg(`Synced ${data.count} instruments`);
-      // Auto-clear the success message after 5 s
-      setTimeout(() => setStatus("idle"), 5000);
-    } catch (err) {
-      setStatus("error");
-      setMsg(err.message);
-    }
-  }
-
-  const label =
-    status === "loading" ? "Syncing…" :
-    status === "ok"      ? "Synced ✓" :
-                           "Sync TradingView";
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "4px" }}>
-      <button
-        className={`btn${status === "loading" || status === "ok" ? " disabled" : ""}`}
-        onClick={handleSync}
-        disabled={status === "loading" || status === "ok"}
-      >
-        {label}
-      </button>
-      {msg && (
-        <span style={{ fontSize: "12px", color: status === "error" ? "var(--neg)" : "var(--pos)" }}>
-          {msg}
-        </span>
-      )}
-    </div>
-  );
-}
-
 function OverviewView({ state }) {
   const book = useMemo(() => computeBook(state), [state]);
   const { summaries, total } = book;
@@ -74,7 +30,6 @@ function OverviewView({ state }) {
           <h1>Book Overview</h1>
           <p className="view-sub">Consolidated across {state.accounts.length} trading accounts · marked to current prices</p>
         </div>
-        <SyncTradingViewButton />
       </header>
 
       {/* headline stats */}
