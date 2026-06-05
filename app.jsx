@@ -202,7 +202,7 @@ function AppShell({ currentUser, onLogout }) {
           {route === "accounts" && openAccount && <AccountDetail state={state} actions={actions} accountId={openAccount} onBack={() => setOpenAccount(null)} />}
           {route === "transactions" && <TransactionsView state={state} actions={actions} accountFilter={accountFilter} />}
           {route === "positions" && <PositionsView state={state} actions={actions} accountFilter={accountFilter} />}
-          {route === "tradingview" && <TradingViewSyncView />}
+          {route === "tradingview" && <TradingViewSyncView state={state} />}
           {route === "roadmap" && <iframe src="analytics-engineer-roadmap.html" className="roadmap-frame" title="Analytics Engineer Roadmap" />}
         </div>
       </main>

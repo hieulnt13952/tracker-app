@@ -110,24 +110,25 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    // ---- Upsert instruments -------------------------------------------------
-    const instrRows = instruments.map((i) => ({
-      symbol: i.symbol,
-      name: i.name,
-      last_price: i.price,
-      updated_at: new Date().toISOString(),
-    }));
-
+    // ---- Upsert all instruments: insert new symbols, update price on existing -
+    const now = new Date().toISOString();
     const { error: instrErr } = await supabase
       .from("instruments")
-      .upsert(instrRows, { onConflict: "symbol" });
-
+      .upsert(
+        instruments.map((i) => ({
+          symbol: i.symbol,
+          name: i.name,
+          last_price: i.price,
+          updated_at: now,
+        })),
+        { onConflict: "symbol" }
+      );
     if (instrErr) throw new Error(`instruments upsert: ${instrErr.message}`);
 
     return res.status(200).json({
       success: true,
       count: instruments.length,
-      instruments, // includes _priceRaw for verification in the TradingView page
+      instruments,
     });
   } catch (err) {
     console.error("[sync-tradingview]", err);
