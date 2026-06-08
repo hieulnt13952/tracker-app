@@ -102,6 +102,7 @@ function AppShell({ currentUser, onLogout }) {
     { id: "transactions", label: "Transactions",    short: "Trades",   icon: "⇄" },
     { id: "positions",    label: "Positions & PnL", short: "PnL",      icon: "▤" },
     { id: "tradingview",  label: "TradingView",     short: "TV Sync",  icon: "⟳" },
+    { id: "vnbank",       label: "VN Bank Accounts", short: "VN Bank", icon: "₫" },
     { id: "roadmap",      label: "Hieu's Roadmap",  short: "Roadmap",  icon: "◎" },
   ];
 
@@ -202,6 +203,7 @@ function AppShell({ currentUser, onLogout }) {
           {route === "accounts" && openAccount && <AccountDetail state={state} actions={actions} accountId={openAccount} onBack={() => setOpenAccount(null)} />}
           {route === "transactions" && <TransactionsView state={state} actions={actions} accountFilter={accountFilter} />}
           {route === "positions" && <PositionsView state={state} actions={actions} accountFilter={accountFilter} />}
+          {route === "vnbank" && <VNBankView />}
           {route === "tradingview" && (
             <TradingViewSyncView
               state={state}
