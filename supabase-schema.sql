@@ -47,6 +47,31 @@ create table if not exists instruments (
 
 alter table instruments disable row level security;
 
+-- ---- VN Bank Accounts ------------------------------------------
+create table if not exists vn_bank_accounts (
+  id           text        primary key,
+  bank_name    text        not null,
+  account_name text        not null,
+  account_type text        not null default 'Savings',
+  currency     text        not null default 'VND',
+  amount       numeric     not null default 0,
+  note         text,
+  updated_at   timestamptz not null default now(),
+  created_at   timestamptz not null default now()
+);
+
+create table if not exists vn_bank_history (
+  id           text        primary key,
+  account_id   text        not null references vn_bank_accounts(id) on delete cascade,
+  old_amount   numeric     not null,
+  new_amount   numeric     not null,
+  note         text,
+  changed_at   timestamptz not null default now()
+);
+
+alter table vn_bank_accounts disable row level security;
+alter table vn_bank_history  disable row level security;
+
 -- ---- Sync usage (tracks Browserless calls per month) ----------
 create table if not exists sync_usage (
   month         text  primary key,   -- "YYYY-MM", e.g. "2026-06"

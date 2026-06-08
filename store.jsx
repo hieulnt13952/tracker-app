@@ -233,6 +233,47 @@ const db = {
     );
   },
 
+  // ---- VN Bank Accounts -----------------------------------------------
+  async loadVNBankAccounts() {
+    if (DEV_MODE) return [];
+    const { data, error } = await _supa.from("vn_bank_accounts").select("*").order("created_at");
+    if (error) { console.error("db.loadVNBankAccounts:", error.message); return []; }
+    return data || [];
+  },
+
+  async addVNBankAccount(account) {
+    if (DEV_MODE) return;
+    const { error } = await _supa.from("vn_bank_accounts").insert({
+      id: account.id, bank_name: account.bank_name, account_name: account.account_name,
+      account_type: account.account_type, currency: account.currency,
+      amount: account.amount, note: account.note || null,
+    });
+    if (error) console.error("db.addVNBankAccount:", error.message);
+  },
+
+  async updateVNBankAmount(id, newAmount, oldAmount) {
+    if (DEV_MODE) return;
+    const now = new Date().toISOString();
+    await _supa.from("vn_bank_accounts").update({ amount: newAmount, updated_at: now }).eq("id", id);
+    await _supa.from("vn_bank_history").insert({
+      id: uid("vh"), account_id: id, old_amount: oldAmount, new_amount: newAmount, changed_at: now,
+    });
+  },
+
+  async loadVNBankHistory() {
+    if (DEV_MODE) return [];
+    const { data, error } = await _supa.from("vn_bank_history")
+      .select("*").order("changed_at", { ascending: false }).limit(200);
+    if (error) { console.error("db.loadVNBankHistory:", error.message); return []; }
+    return data || [];
+  },
+
+  async deleteVNBankAccount(id) {
+    if (DEV_MODE) return;
+    const { error } = await _supa.from("vn_bank_accounts").delete().eq("id", id);
+    if (error) console.error("db.deleteVNBankAccount:", error.message);
+  },
+
   async loadSyncUsage() {
     if (DEV_MODE) return { month: "dev", limit_count: 1000, refresh_count: 0, remaining: 1000 };
     const month = new Date().toISOString().slice(0, 7); // "YYYY-MM"
