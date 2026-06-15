@@ -274,6 +274,15 @@ const db = {
     if (error) console.error("db.deleteVNBankAccount:", error.message);
   },
 
+  // ---- Ticker list --------------------------------------------
+  async loadTickerList() {
+    if (DEV_MODE) return [];
+    const { data, error } = await _supa.from("tickerlist")
+      .select("*").order("created_at");
+    if (error) { console.error("db.loadTickerList:", error.message); return []; }
+    return data || [];
+  },
+
   // ---- Wishlist -----------------------------------------------
   async loadWishlistItems() {
     if (DEV_MODE) return [];

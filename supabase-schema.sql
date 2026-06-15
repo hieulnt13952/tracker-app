@@ -72,6 +72,16 @@ create table if not exists vn_bank_history (
 alter table vn_bank_accounts disable row level security;
 alter table vn_bank_history  disable row level security;
 
+-- ---- Ticker tape symbols (managed manually in Supabase) -------
+create table if not exists tickerlist (
+  symbol     text        primary key,   -- e.g. "FOREXCOM:SPXUSD"
+  name       text,                      -- friendly label, optional
+  created_at timestamptz not null default now(),
+  created_by text
+);
+
+alter table tickerlist disable row level security;
+
 -- ---- Wishlist items -------------------------------------------
 create table if not exists wishlist_items (
   id          text        primary key,

@@ -119,6 +119,7 @@ function WishlistView({ currentUser }) {
   const [loading,    setLoading]    = useState(true);
   const [showAdd,    setShowAdd]    = useState(false);
   const [error,      setError]      = useState("");
+  const [userFilter, setUserFilter] = useState("all");
   const dragId      = useRef(null);
   const [dragOverId, setDragOverId] = useState(null);
 
@@ -164,6 +165,16 @@ function WishlistView({ currentUser }) {
 
   function handleDragEnd() { dragId.current = null; setDragOverId(null); }
 
+  const usernames = useMemo(() => {
+    const names = [...new Set(items.map((x) => x.created_by).filter(Boolean))].sort();
+    return names;
+  }, [items]);
+
+  const visibleItems = useMemo(() => {
+    if (userFilter === "all") return items;
+    return items.filter((x) => x.created_by === userFilter);
+  }, [items, userFilter]);
+
   async function handleAdd({ name, url, description }) {
     const id         = uid("wl");
     const rank       = items.length;
@@ -196,23 +207,35 @@ function WishlistView({ currentUser }) {
         <div>
           <h1>Wishlist</h1>
           <p className="view-sub">
-            Shared wishlist · {items.length} item{items.length !== 1 ? "s" : ""} · drag ⠿ to reorder
+            Shared wishlist · {visibleItems.length}{userFilter !== "all" ? ` of ${items.length}` : ""} item{items.length !== 1 ? "s" : ""} · drag ⠿ to reorder
           </p>
         </div>
         <div className="head-actions">
+          {usernames.length > 0 && (
+            <select value={userFilter} onChange={(e) => setUserFilter(e.target.value)}
+              style={{ width: "auto", minWidth: 130, fontSize: 13, padding: "7px 10px" }}>
+              <option value="all">All users</option>
+              {usernames.map((u) => (
+                <option key={u} value={u}>{u}</option>
+              ))}
+            </select>
+          )}
           <button className="btn primary" onClick={() => setShowAdd(true)}>＋ Add Item</button>
         </div>
       </header>
 
       {error && <div className="warn" style={{ marginBottom: "1rem" }}>{error}</div>}
 
-      {items.length === 0 ? (
-        <Empty title="No items yet" sub="Click '＋ Add Item' to add your first wish." />
+      {visibleItems.length === 0 ? (
+        <Empty
+          title={userFilter !== "all" ? `No items from ${userFilter}` : "No items yet"}
+          sub={userFilter !== "all" ? "Try selecting a different user." : "Click '＋ Add Item' to add your first wish."}
+        />
       ) : (
         <div className="panel">
           <div className="panel-body no-pad">
             <div className="wishlist-list">
-              {items.map((item) => (
+              {visibleItems.map((item) => (
                 <WishlistRow
                   key={item.id}
                   item={item}
