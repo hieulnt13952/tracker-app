@@ -475,6 +475,13 @@ table.data tr:hover .row-del { opacity: 1; }
 .wishlist-row-link { font-size: 12px; color: var(--accent); text-decoration: none; }
 .wishlist-row-link:hover { text-decoration: underline; }
 
+.wishlist-by {
+  font-size: 11px; color: var(--faint); flex-shrink: 0;
+  padding: 2px 7px; background: var(--surface-2); border-radius: 20px;
+  white-space: nowrap; align-self: flex-start; margin-top: 2px;
+  font-weight: 500; text-transform: capitalize;
+}
+
 .wishlist-del-btn {
   background: none; border: none; cursor: pointer; flex-shrink: 0;
   font-size: 11px; color: var(--faint); padding: 3px 7px;

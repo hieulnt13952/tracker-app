@@ -1,5 +1,5 @@
 // ============================================================
-//  views-wishlist.jsx — Wishlist tracker (name, link, description, ranked)
+//  views-wishlist.jsx — Shared wishlist (all users, ranked)
 // ============================================================
 
 function WishlistAddForm({ onClose, onAdd }) {
@@ -74,7 +74,7 @@ function WishlistRow({ item, isDragOver, onDelete, onDragStart, onDragOver, onDr
 
   function displayUrl(rawUrl) {
     try { return new URL(rawUrl).hostname.replace(/^www\./, ""); }
-    catch { return rawUrl.slice(0, 40); }
+    catch (e) { return rawUrl.slice(0, 40); }
   }
 
   return (
@@ -97,6 +97,11 @@ function WishlistRow({ item, isDragOver, onDelete, onDragStart, onDragOver, onDr
           {displayUrl(item.url)} ↗
         </a>
       </div>
+      {item.created_by && (
+        <span className="wishlist-by" title={`Added by ${item.created_by}`}>
+          {item.created_by}
+        </span>
+      )}
       <button
         className={`wishlist-del-btn${confirmDel ? " confirm" : ""}`}
         onClick={handleDelete}
@@ -109,7 +114,7 @@ function WishlistRow({ item, isDragOver, onDelete, onDragStart, onDragOver, onDr
 }
 
 // ---- Main view -------------------------------------------------------------
-function WishlistView() {
+function WishlistView({ currentUser }) {
   const [items,      setItems]      = useState([]);
   const [loading,    setLoading]    = useState(true);
   const [showAdd,    setShowAdd]    = useState(false);
@@ -160,9 +165,10 @@ function WishlistView() {
   function handleDragEnd() { dragId.current = null; setDragOverId(null); }
 
   async function handleAdd({ name, url, description }) {
-    const id   = uid("wl");
-    const rank = items.length;
-    await db.addWishlistItem({ id, name, url, description, rank });
+    const id         = uid("wl");
+    const rank       = items.length;
+    const created_by = currentUser ? currentUser.username : null;
+    await db.addWishlistItem({ id, name, url, description, rank, created_by });
     await loadData();
     setShowAdd(false);
   }
@@ -190,7 +196,7 @@ function WishlistView() {
         <div>
           <h1>Wishlist</h1>
           <p className="view-sub">
-            Things I want · {items.length} item{items.length !== 1 ? "s" : ""} · drag ⠿ to reorder
+            Shared wishlist · {items.length} item{items.length !== 1 ? "s" : ""} · drag ⠿ to reorder
           </p>
         </div>
         <div className="head-actions">

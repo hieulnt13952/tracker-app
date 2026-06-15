@@ -288,6 +288,7 @@ const db = {
     const { error } = await _supa.from("wishlist_items").insert({
       id: item.id, name: item.name, url: item.url,
       description: item.description || null, rank: item.rank,
+      created_by: item.created_by || null,
     });
     if (error) throw new Error(error.message);
   },

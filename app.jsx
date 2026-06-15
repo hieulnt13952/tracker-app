@@ -227,7 +227,7 @@ function AppShell({ currentUser, onLogout, onUpdateUser }) {
           {route === "transactions" && <TransactionsView state={state} actions={actions} accountFilter={accountFilter} />}
           {route === "positions" && <PositionsView state={state} actions={actions} accountFilter={accountFilter} />}
           {route === "vnbank" && <VNBankView />}
-          {route === "wishlist" && <WishlistView />}
+          {route === "wishlist" && <WishlistView currentUser={currentUser} />}
           {route === "tradingview" && (
             <TradingViewSyncView
               state={state}

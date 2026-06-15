@@ -79,6 +79,7 @@ create table if not exists wishlist_items (
   url         text        not null,
   description text,
   rank        integer     not null default 0,
+  created_by  text,
   created_at  timestamptz not null default now()
 );
 
@@ -201,3 +202,7 @@ alter table instruments
 
 -- 4. Add avatar_url to users table
 alter table users add column if not exists avatar_url text;
+
+-- 5. Add created_by and rank to wishlist_items (if table already exists)
+alter table wishlist_items add column if not exists created_by text;
+alter table wishlist_items add column if not exists rank integer not null default 0;
