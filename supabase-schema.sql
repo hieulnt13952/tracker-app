@@ -72,6 +72,60 @@ create table if not exists vn_bank_history (
 alter table vn_bank_accounts disable row level security;
 alter table vn_bank_history  disable row level security;
 
+-- ---- Wishlist items -------------------------------------------
+create table if not exists wishlist_items (
+  id          text        primary key,
+  name        text        not null,
+  url         text        not null,
+  description text,
+  rank        integer     not null default 0,
+  created_at  timestamptz not null default now()
+);
+
+alter table wishlist_items disable row level security;
+
+-- ---- Storage bucket for user profile avatars ------------------
+-- Creates a public bucket so uploaded images are readable without auth.
+insert into storage.buckets (id, name, public)
+values ('user-avatars', 'user-avatars', true)
+on conflict (id) do nothing;
+
+-- Allow anyone (anon key) to read, upload, and overwrite avatars.
+do $$ begin
+  if not exists (
+    select 1 from pg_policies where schemaname = 'storage'
+    and tablename = 'objects' and policyname = 'user_avatars_read'
+  ) then
+    create policy "user_avatars_read"
+      on storage.objects for select
+      using (bucket_id = 'user-avatars');
+  end if;
+  if not exists (
+    select 1 from pg_policies where schemaname = 'storage'
+    and tablename = 'objects' and policyname = 'user_avatars_write'
+  ) then
+    create policy "user_avatars_write"
+      on storage.objects for insert
+      with check (bucket_id = 'user-avatars');
+  end if;
+  if not exists (
+    select 1 from pg_policies where schemaname = 'storage'
+    and tablename = 'objects' and policyname = 'user_avatars_update'
+  ) then
+    create policy "user_avatars_update"
+      on storage.objects for update
+      using (bucket_id = 'user-avatars');
+  end if;
+  if not exists (
+    select 1 from pg_policies where schemaname = 'storage'
+    and tablename = 'objects' and policyname = 'user_avatars_delete'
+  ) then
+    create policy "user_avatars_delete"
+      on storage.objects for delete
+      using (bucket_id = 'user-avatars');
+  end if;
+end $$;
+
 -- ---- Sync usage (tracks Browserless calls per month) ----------
 create table if not exists sync_usage (
   month         text  primary key,   -- "YYYY-MM", e.g. "2026-06"
@@ -91,6 +145,7 @@ create table if not exists users (
   username     text        not null unique,
   password_hash text       not null,
   display_name text,
+  avatar_url   text,
   created_at   timestamptz not null default now()
 );
 
@@ -143,3 +198,6 @@ alter table instruments
 alter table instruments
   add column if not exists last_price numeric,
   add column if not exists updated_at timestamptz default now();
+
+-- 4. Add avatar_url to users table
+alter table users add column if not exists avatar_url text;

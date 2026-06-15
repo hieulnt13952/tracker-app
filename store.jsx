@@ -274,6 +274,54 @@ const db = {
     if (error) console.error("db.deleteVNBankAccount:", error.message);
   },
 
+  // ---- Wishlist -----------------------------------------------
+  async loadWishlistItems() {
+    if (DEV_MODE) return [];
+    const { data, error } = await _supa.from("wishlist_items")
+      .select("*").order("rank");
+    if (error) { console.error("db.loadWishlistItems:", error.message); return []; }
+    return data || [];
+  },
+
+  async addWishlistItem(item) {
+    if (DEV_MODE) return;
+    const { error } = await _supa.from("wishlist_items").insert({
+      id: item.id, name: item.name, url: item.url,
+      description: item.description || null, rank: item.rank,
+    });
+    if (error) throw new Error(error.message);
+  },
+
+  async deleteWishlistItem(id) {
+    if (DEV_MODE) return;
+    const { error } = await _supa.from("wishlist_items").delete().eq("id", id);
+    if (error) console.error("db.deleteWishlistItem:", error.message);
+  },
+
+  async reorderWishlistItems(rankings) {
+    if (DEV_MODE) return;
+    await Promise.all(
+      rankings.map(({ id, rank }) =>
+        _supa.from("wishlist_items").update({ rank }).eq("id", id)
+      )
+    );
+  },
+
+  // ---- User avatar -----------------------------------------------
+  async uploadUserAvatar(file, username) {
+    if (DEV_MODE) return null;
+    const ext = file.name.split(".").pop().toLowerCase();
+    const path = `${username}.${ext}`;
+    const { error } = await _supa.storage
+      .from("user-avatars")
+      .upload(path, file, { upsert: true, contentType: file.type });
+    if (error) throw new Error("Upload failed: " + error.message);
+    const { data } = _supa.storage.from("user-avatars").getPublicUrl(path);
+    const avatarUrl = data.publicUrl;
+    await _supa.from("users").update({ avatar_url: avatarUrl }).eq("username", username);
+    return avatarUrl;
+  },
+
   async loadSyncUsage() {
     if (DEV_MODE) return { month: "dev", limit_count: 1000, refresh_count: 0, remaining: 1000 };
     const month = new Date().toISOString().slice(0, 7); // "YYYY-MM"
@@ -283,18 +331,21 @@ const db = {
   },
 
   // Verifies credentials via the login() Postgres RPC.
-  // Returns { username, display_name } on success, null on failure.
+  // Returns { username, display_name, avatar_url } on success, null on failure.
   async login(username, password) {
     if (DEV_MODE) {
-      // single dev account so the app is usable without a database
-      return (username === "dev" && password === "dev") ? { username: "dev", display_name: "Dev" } : null;
+      return (username === "dev" && password === "dev") ? { username: "dev", display_name: "Dev", avatar_url: null } : null;
     }
     const { data, error } = await _supa.rpc("login", {
       p_username: username.toLowerCase().trim(),
       p_password: password,
     });
     if (error) { console.error("db.login:", error.message); return null; }
-    return (data && data.length > 0) ? data[0] : null;
+    if (!data || data.length === 0) return null;
+    const user = data[0];
+    const { data: profile } = await _supa.from("users")
+      .select("avatar_url").eq("username", user.username).single();
+    return { ...user, avatar_url: profile?.avatar_url || null };
   },
 };
 

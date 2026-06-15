@@ -10,10 +10,12 @@ function App() {
     return <LoginView onLogin={setCurrentUser} />;
   }
 
-  return <AppShell currentUser={currentUser} onLogout={() => { clearSession(); setCurrentUser(null); }} />;
+  function handleUpdateUser(updated) { setSession(updated); setCurrentUser(updated); }
+
+  return <AppShell currentUser={currentUser} onLogout={() => { clearSession(); setCurrentUser(null); }} onUpdateUser={handleUpdateUser} />;
 }
 
-function AppShell({ currentUser, onLogout }) {
+function AppShell({ currentUser, onLogout, onUpdateUser }) {
   // null = loading; populated once db.loadAll() resolves
   const [state, setState] = useState(DEV_MODE ? seedState() : null);
   const [dbError, setDbError] = useState(null);
@@ -102,7 +104,8 @@ function AppShell({ currentUser, onLogout }) {
     { id: "transactions", label: "Transactions",    short: "Trades",   icon: "⇄" },
     { id: "positions",    label: "Positions & PnL", short: "PnL",      icon: "▤" },
     { id: "tradingview",  label: "TradingView",     short: "TV Sync",  icon: "⟳" },
-    { id: "vnbank",       label: "VN Bank Accounts", short: "VN Bank", icon: "₫" },
+    { id: "vnbank",       label: "VN Bank Accounts", short: "VN Bank",  icon: "₫" },
+    { id: "wishlist",     label: "Wishlist",         short: "Wishlist", icon: "♡" },
     { id: "roadmap",      label: "Hieu's Roadmap",  short: "Roadmap",  icon: "◎" },
   ];
 
@@ -168,7 +171,27 @@ function AppShell({ currentUser, onLogout }) {
             </button>
           )}
           <div className="sidebar-user">
-            <span className="sidebar-username">{currentUser.username}</span>
+            <label className="user-avatar-label" title="Click to change profile photo">
+              <div className="user-avatar">
+                {currentUser.avatar_url
+                  ? <img src={currentUser.avatar_url} alt={currentUser.username} />
+                  : <span>{(currentUser.displayName || currentUser.username || "?")[0].toUpperCase()}</span>
+                }
+              </div>
+              <span className="sidebar-username">{currentUser.displayName || currentUser.username}</span>
+              <input
+                type="file" accept="image/*" style={{ display: "none" }}
+                onChange={async (e) => {
+                  const file = e.target.files[0];
+                  if (!file) return;
+                  try {
+                    const url = await db.uploadUserAvatar(file, currentUser.username);
+                    onUpdateUser({ ...currentUser, avatar_url: url });
+                  } catch (err) { console.error("Avatar upload:", err.message); }
+                  e.target.value = "";
+                }}
+              />
+            </label>
             <button className="logout-btn" onClick={onLogout} title="Sign out">Sign out</button>
           </div>
         </div>
@@ -204,6 +227,7 @@ function AppShell({ currentUser, onLogout }) {
           {route === "transactions" && <TransactionsView state={state} actions={actions} accountFilter={accountFilter} />}
           {route === "positions" && <PositionsView state={state} actions={actions} accountFilter={accountFilter} />}
           {route === "vnbank" && <VNBankView />}
+          {route === "wishlist" && <WishlistView />}
           {route === "tradingview" && (
             <TradingViewSyncView
               state={state}

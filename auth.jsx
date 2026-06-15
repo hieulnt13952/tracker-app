@@ -19,7 +19,8 @@ function getSession() {
 function setSession(user) {
   sessionStorage.setItem(SESSION_KEY, JSON.stringify({
     username: user.username,
-    displayName: user.display_name || user.username,
+    displayName: user.display_name || user.displayName || user.username,
+    avatar_url: user.avatar_url || null,
   }));
 }
 
