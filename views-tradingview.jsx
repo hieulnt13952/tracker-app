@@ -50,7 +50,7 @@ function TVChart() {
       locale: "en",
       save_image: true,
       style: "1",
-      symbol: "NASDAQ:AAPL",
+      symbol: "CMCMARKETS:GOLD",
       theme: "light",
       timezone: "Etc/UTC",
       backgroundColor: "#ffffff",
