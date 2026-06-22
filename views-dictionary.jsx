@@ -406,6 +406,104 @@ const NPR_TOPICS = [
   { num: "1034", label: "Book Reviews" },
 ];
 
+// ---- Inline word lookup panel (shown beside the article reader) ----
+function LookupPanel() {
+  const [query,   setQuery]   = useState("");
+  const [entry,   setEntry]   = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error,   setError]   = useState("");
+
+  async function handleSearch(e) {
+    e.preventDefault();
+    const word = query.trim();
+    if (!word) return;
+    setLoading(true);
+    setError("");
+    setEntry(null);
+    try {
+      const data = await fetchDefinition(word);
+      setEntry(data[0]);
+    } catch (err) {
+      setError(err.message);
+    }
+    setLoading(false);
+  }
+
+  const definitions = useMemo(() => {
+    if (!entry) return [];
+    const rows = [];
+    (entry.meanings || []).forEach((meaning) => {
+      (meaning.definitions || []).forEach((def) => {
+        rows.push({ pos: meaning.partOfSpeech, def: def.definition, ex: def.example || null });
+      });
+    });
+    return rows;
+  }, [entry]);
+
+  return (
+    <section className="panel lookup-panel">
+      <div className="panel-head"><h2>Look up</h2></div>
+      <div style={{ padding: "12px 14px", borderBottom: "1px solid var(--border)" }}>
+        <form onSubmit={handleSearch} style={{ display: "flex", gap: 7 }}>
+          <input
+            type="text" value={query} placeholder="Paste a word…"
+            onChange={(e) => { setQuery(e.target.value); setError(""); }}
+            style={{ flex: 1, fontSize: 13 }}
+          />
+          <button type="submit"
+            className={`btn primary${(loading || !query.trim()) ? " disabled" : ""}`}
+            disabled={loading || !query.trim()}
+            style={{ whiteSpace: "nowrap", fontSize: 12, padding: "0 10px" }}>
+            {loading ? "…" : "Go"}
+          </button>
+        </form>
+      </div>
+
+      <div className="lookup-scroll">
+        {error && <div className="warn" style={{ margin: 12 }}>{error}</div>}
+
+        {!entry && !loading && !error && (
+          <div style={{ padding: "28px 14px", textAlign: "center", color: "var(--faint)", fontSize: 12.5 }}>
+            Copy a word from the article and paste it here.
+          </div>
+        )}
+
+        {entry && (
+          <div style={{ padding: "12px 14px" }}>
+            {/* Word + phonetic */}
+            <div style={{ marginBottom: 10 }}>
+              <span style={{ fontSize: 17, fontWeight: 700 }}>{entry.word}</span>
+              {entry.phonetic && (
+                <span style={{ fontSize: 12, color: "var(--muted)", fontFamily: '"IBM Plex Mono", monospace', marginLeft: 8 }}>
+                  {entry.phonetic}
+                </span>
+              )}
+              <AudioPlayer phonetics={entry.phonetics} />
+            </div>
+            {/* Definitions list */}
+            {definitions.map((d, i) => (
+              <div key={i} style={{
+                marginBottom: 10, paddingBottom: 10,
+                borderBottom: i < definitions.length - 1 ? "1px solid var(--border)" : "none",
+              }}>
+                <span className="tag" style={{ fontSize: 11, marginBottom: 4, display: "inline-block" }}>
+                  {d.pos}
+                </span>
+                <div style={{ fontSize: 13, lineHeight: 1.55, color: "var(--text)" }}>{d.def}</div>
+                {d.ex && (
+                  <div style={{ fontSize: 12, color: "var(--muted)", fontStyle: "italic", marginTop: 3 }}>
+                    "{d.ex}"
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
 function NPRReading() {
   const [topicNum,       setTopicNum]       = useState("1001");
   const [articles,       setArticles]       = useState([]);
@@ -503,7 +601,7 @@ function NPRReading() {
         <Empty title="Pick a topic" sub="Select a category above or enter any 4-digit NPR topic number." />
       )}
 
-      {/* Two-panel reader */}
+      {/* Three-panel reader */}
       {articles.length > 0 && (
         <div className="npr-reader-grid">
           {/* LEFT — article list */}
@@ -526,7 +624,7 @@ function NPRReading() {
             </div>
           </section>
 
-          {/* RIGHT — article content */}
+          {/* MIDDLE — article content */}
           <section className="panel" style={{ overflow: "hidden" }}>
             {!selectedHref && (
               <div className="panel-body" style={{ color: "var(--muted)", textAlign: "center", padding: "60px 20px" }}>
@@ -557,6 +655,9 @@ function NPRReading() {
               </div>
             )}
           </section>
+
+          {/* RIGHT — inline look up */}
+          <LookupPanel />
         </div>
       )}
     </div>

@@ -523,12 +523,23 @@ table.data tr:hover .row-del { opacity: 1; }
 /* ---- NPR reader ---- */
 .npr-reader-grid {
   display: grid;
-  grid-template-columns: 340px 1fr;
+  grid-template-columns: 300px 1fr 280px;
   gap: 16px;
   align-items: start;
 }
+@media (max-width: 1100px) {
+  .npr-reader-grid { grid-template-columns: 280px 1fr; }
+  .lookup-panel { display: none; }
+}
 @media (max-width: 900px) {
   .npr-reader-grid { grid-template-columns: 1fr; }
+}
+
+.lookup-panel { overflow: hidden; }
+
+.lookup-scroll {
+  max-height: calc(100vh - 340px);
+  overflow-y: auto;
 }
 
 .npr-list-scroll {
