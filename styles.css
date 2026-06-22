@@ -519,3 +519,60 @@ table.data tr:hover .row-del { opacity: 1; }
 @media (max-width: 768px) {
   .wishlist-del-btn { opacity: 1; }
 }
+
+/* ---- NPR reader ---- */
+.npr-reader-grid {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .npr-reader-grid { grid-template-columns: 1fr; }
+}
+
+.npr-list-scroll {
+  max-height: 560px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.npr-article-btn {
+  display: flex; align-items: flex-start; gap: 10px;
+  width: 100%; text-align: left;
+  background: none; border: none; border-bottom: 1px solid var(--border);
+  padding: 11px 16px; cursor: pointer;
+  font-family: inherit; font-size: 13px; color: var(--text);
+  line-height: 1.45; transition: background .1s;
+}
+.npr-article-btn:last-child { border-bottom: none; }
+.npr-article-btn:hover { background: var(--surface-2); }
+.npr-article-btn.active {
+  background: #eef6f5; color: var(--accent-deep); font-weight: 500;
+}
+
+.npr-article-num {
+  flex-shrink: 0; min-width: 22px;
+  font-size: 11px; font-weight: 600;
+  color: var(--faint); font-family: "IBM Plex Mono", monospace;
+  padding-top: 1px;
+}
+
+.npr-article-scroll {
+  padding: 20px 22px;
+  max-height: 560px;
+  overflow-y: auto;
+}
+
+.npr-chip {
+  cursor: pointer; user-select: none;
+  border: 1px solid var(--border-2);
+  background: var(--surface); color: var(--text);
+  font-size: 12px; padding: 4px 10px; border-radius: 20px;
+  transition: .12s;
+}
+.npr-chip:hover { border-color: var(--accent); color: var(--accent); }
+.npr-chip.active {
+  background: var(--accent); color: #fff; border-color: var(--accent);
+}

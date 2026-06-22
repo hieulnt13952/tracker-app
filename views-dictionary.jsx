@@ -374,6 +374,178 @@ function DictionarySaved({ savedWords, loading, onDelete }) {
 }
 
 // ============================================================
+//  TAB 3 — NPR Reading
+// ============================================================
+const NPR_TOPICS = [
+  { num: "1001", label: "News" },
+  { num: "1003", label: "Politics" },
+  { num: "1007", label: "Technology" },
+  { num: "1009", label: "Science" },
+  { num: "1019", label: "Health" },
+  { num: "1033", label: "Music" },
+  { num: "1045", label: "Arts & Life" },
+  { num: "1053", label: "Business" },
+  { num: "1014", label: "Education" },
+];
+
+function NPRReading() {
+  const [topicNum,       setTopicNum]       = useState("1001");
+  const [articles,       setArticles]       = useState([]);
+  const [loadingList,    setLoadingList]    = useState(false);
+  const [listError,      setListError]      = useState("");
+  const [selectedHref,   setSelectedHref]   = useState(null);
+  const [articleContent, setArticleContent] = useState(null); // { title, paragraphs[] }
+  const [loadingArticle, setLoadingArticle] = useState(false);
+  const [articleError,   setArticleError]   = useState("");
+
+  async function fetchList(num) {
+    if (!num) return;
+    setLoadingList(true);
+    setListError("");
+    setArticles([]);
+    setSelectedHref(null);
+    setArticleContent(null);
+    try {
+      const res  = await fetch("/api/fetch-npr?path=" + encodeURIComponent(num));
+      const html = await res.text();
+      const doc  = new DOMParser().parseFromString(html, "text/html");
+      const links = Array.from(doc.querySelectorAll("a.topic-title"));
+      if (links.length === 0) throw new Error("No articles found — try a different topic number.");
+      setArticles(links.map((a) => ({
+        href:  a.getAttribute("href"),
+        title: a.textContent.trim(),
+      })));
+    } catch (e) {
+      setListError(e.message);
+    }
+    setLoadingList(false);
+  }
+
+  async function fetchArticle(href) {
+    const path = href.startsWith("/") ? href.slice(1) : href;
+    setSelectedHref(href);
+    setLoadingArticle(true);
+    setArticleError("");
+    setArticleContent(null);
+    try {
+      const res  = await fetch("/api/fetch-npr?path=" + encodeURIComponent(path));
+      const html = await res.text();
+      const doc  = new DOMParser().parseFromString(html, "text/html");
+
+      const title = doc.querySelector("h1")?.textContent?.trim() || "";
+      const paragraphs = Array.from(doc.querySelectorAll("p"))
+        .map((p) => p.textContent.trim())
+        .filter((t) => t.length > 10); // skip nav crumbs / empty
+      setArticleContent({ title, paragraphs });
+    } catch (e) {
+      setArticleError(e.message);
+    }
+    setLoadingArticle(false);
+  }
+
+  function handleTopicSubmit(e) {
+    e.preventDefault();
+    fetchList(topicNum);
+  }
+
+  return (
+    <div>
+      {/* Topic picker bar */}
+      <div style={{ marginBottom: "1.25rem" }}>
+        <form onSubmit={handleTopicSubmit} style={{ display: "flex", gap: 9, marginBottom: 10 }}>
+          <input
+            type="text" value={topicNum} placeholder="4-digit topic e.g. 1001"
+            onChange={(e) => setTopicNum(e.target.value.replace(/\D/g, "").slice(0, 4))}
+            style={{ width: 200 }}
+          />
+          <button type="submit"
+            className={`btn primary${(loadingList || !topicNum) ? " disabled" : ""}`}
+            disabled={loadingList || !topicNum}>
+            {loadingList ? "Loading…" : "Browse topic"}
+          </button>
+        </form>
+        {/* Quick-pick category chips */}
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {NPR_TOPICS.map((t) => (
+            <button
+              key={t.num}
+              className={"tag npr-chip" + (topicNum === t.num && articles.length ? " active" : "")}
+              onClick={() => { setTopicNum(t.num); fetchList(t.num); }}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {listError && <div className="warn" style={{ marginBottom: "1rem" }}>{listError}</div>}
+
+      {/* Empty prompt */}
+      {!articles.length && !loadingList && !listError && (
+        <Empty title="Pick a topic" sub="Select a category above or enter any 4-digit NPR topic number." />
+      )}
+
+      {/* Two-panel reader */}
+      {articles.length > 0 && (
+        <div className="npr-reader-grid">
+          {/* LEFT — article list */}
+          <section className="panel" style={{ overflow: "hidden" }}>
+            <div className="panel-head">
+              <h2>Articles</h2>
+              <span className="panel-meta">{articles.length} stories</span>
+            </div>
+            <div className="npr-list-scroll">
+              {articles.map((a, i) => (
+                <button
+                  key={i}
+                  className={"npr-article-btn" + (selectedHref === a.href ? " active" : "")}
+                  onClick={() => fetchArticle(a.href)}
+                >
+                  <span className="npr-article-num">{i + 1}</span>
+                  {a.title}
+                </button>
+              ))}
+            </div>
+          </section>
+
+          {/* RIGHT — article content */}
+          <section className="panel" style={{ overflow: "hidden" }}>
+            {!selectedHref && (
+              <div className="panel-body" style={{ color: "var(--muted)", textAlign: "center", padding: "60px 20px" }}>
+                <div style={{ fontSize: 28, marginBottom: 10 }}>📰</div>
+                <div style={{ fontWeight: 600 }}>Select a story</div>
+                <div style={{ fontSize: 13, marginTop: 5 }}>Click any article on the left to read it here.</div>
+              </div>
+            )}
+            {loadingArticle && (
+              <div className="panel-body" style={{ color: "var(--muted)", textAlign: "center", padding: 40 }}>
+                Loading article…
+              </div>
+            )}
+            {articleError && (
+              <div className="panel-body"><div className="warn">{articleError}</div></div>
+            )}
+            {articleContent && !loadingArticle && (
+              <div className="npr-article-scroll">
+                <h2 style={{ fontSize: 20, fontWeight: 700, lineHeight: 1.35, marginBottom: 16 }}>
+                  {articleContent.title}
+                </h2>
+                <div style={{ height: 1, background: "var(--border)", marginBottom: 16 }} />
+                {articleContent.paragraphs.map((p, i) => (
+                  <p key={i} style={{ marginBottom: 13, lineHeight: 1.7, fontSize: 14.5, color: "var(--text)" }}>
+                    {p}
+                  </p>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
 //  Main view
 // ============================================================
 function DictionaryView({ currentUser }) {
@@ -418,8 +590,9 @@ function DictionaryView({ currentUser }) {
           value={tab}
           onChange={setTab}
           options={[
-            { value: "search", label: "Search" },
-            { value: "saved",  label: "Saved Words (" + savedWords.length + ")" },
+            { value: "search",  label: "Search" },
+            { value: "saved",   label: "Saved Words (" + savedWords.length + ")" },
+            { value: "reading", label: "Reading" },
           ]}
         />
       </div>
@@ -438,6 +611,7 @@ function DictionaryView({ currentUser }) {
           onDelete={handleDelete}
         />
       )}
+      {tab === "reading" && <NPRReading />}
     </div>
   );
 }
