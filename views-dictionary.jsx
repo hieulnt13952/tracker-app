@@ -559,39 +559,19 @@ function NPRReading() {
     setLoadingArticle(false);
   }
 
-  function handleTopicSubmit(e) {
-    e.preventDefault();
-    fetchList(topicNum);
-  }
-
   return (
     <div>
-      {/* Topic picker bar */}
-      <div style={{ marginBottom: "1.25rem" }}>
-        <form onSubmit={handleTopicSubmit} style={{ display: "flex", gap: 9, marginBottom: 10 }}>
-          <input
-            type="text" value={topicNum} placeholder="4-digit topic e.g. 1001"
-            onChange={(e) => setTopicNum(e.target.value.replace(/\D/g, "").slice(0, 4))}
-            style={{ width: 200 }}
-          />
-          <button type="submit"
-            className={`btn primary${(loadingList || !topicNum) ? " disabled" : ""}`}
-            disabled={loadingList || !topicNum}>
-            {loadingList ? "Loading…" : "Browse topic"}
+      {/* Topic chips */}
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: "1.25rem" }}>
+        {NPR_TOPICS.map((t) => (
+          <button
+            key={t.num}
+            className={"tag npr-chip" + (topicNum === t.num && articles.length ? " active" : "")}
+            onClick={() => { setTopicNum(t.num); fetchList(t.num); }}
+          >
+            {loadingList && topicNum === t.num ? "Loading…" : t.label}
           </button>
-        </form>
-        {/* Quick-pick category chips */}
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-          {NPR_TOPICS.map((t) => (
-            <button
-              key={t.num}
-              className={"tag npr-chip" + (topicNum === t.num && articles.length ? " active" : "")}
-              onClick={() => { setTopicNum(t.num); fetchList(t.num); }}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
+        ))}
       </div>
 
       {listError && <div className="warn" style={{ marginBottom: "1rem" }}>{listError}</div>}
