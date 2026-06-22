@@ -532,7 +532,7 @@ table.data tr:hover .row-del { opacity: 1; }
 }
 
 .npr-list-scroll {
-  max-height: 560px;
+  max-height: calc(100vh - 280px);
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -560,9 +560,11 @@ table.data tr:hover .row-del { opacity: 1; }
 }
 
 .npr-article-scroll {
-  padding: 20px 22px;
-  max-height: 560px;
+  padding: 20px 28px;
+  max-height: calc(100vh - 280px);
   overflow-y: auto;
+  font-size: 15px;
+  line-height: 1.75;
 }
 
 .npr-chip {

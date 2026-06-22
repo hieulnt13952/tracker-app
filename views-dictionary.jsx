@@ -378,14 +378,32 @@ function DictionarySaved({ savedWords, loading, onDelete }) {
 // ============================================================
 const NPR_TOPICS = [
   { num: "1001", label: "News" },
-  { num: "1003", label: "Politics" },
-  { num: "1007", label: "Technology" },
-  { num: "1009", label: "Science" },
-  { num: "1019", label: "Health" },
-  { num: "1033", label: "Music" },
-  { num: "1045", label: "Arts & Life" },
-  { num: "1053", label: "Business" },
-  { num: "1014", label: "Education" },
+  { num: "1002", label: "NPR" },
+  { num: "1003", label: "National" },
+  { num: "1004", label: "World" },
+  { num: "1006", label: "Business" },
+  { num: "1007", label: "Science" },
+  { num: "1008", label: "Culture" },
+  { num: "1009", label: "Middle East" },
+  { num: "1013", label: "Education" },
+  { num: "1014", label: "Politics" },
+  { num: "1015", label: "Race" },
+  { num: "1016", label: "Religion" },
+  { num: "1017", label: "Economy" },
+  { num: "1018", label: "Your Money" },
+  { num: "1019", label: "Technology" },
+  { num: "1020", label: "Media" },
+  { num: "1023", label: "Radio Expeditions" },
+  { num: "1024", label: "Research News" },
+  { num: "1025", label: "Environment" },
+  { num: "1026", label: "Space" },
+  { num: "1027", label: "Healthcare" },
+  { num: "1029", label: "Mental Health" },
+  { num: "1030", label: "Children's Health" },
+  { num: "1031", label: "Global Health" },
+  { num: "1032", label: "Books" },
+  { num: "1033", label: "Author Interviews" },
+  { num: "1034", label: "Book Reviews" },
 ];
 
 function NPRReading() {
@@ -549,7 +567,7 @@ function NPRReading() {
 //  Main view
 // ============================================================
 function DictionaryView({ currentUser }) {
-  const [tab,          setTab]          = useState("search");
+  const [tab,          setTab]          = useState("reading");
   const [savedWords,   setSavedWords]   = useState([]);
   const [loadingWords, setLoadingWords] = useState(true);
 
@@ -590,9 +608,9 @@ function DictionaryView({ currentUser }) {
           value={tab}
           onChange={setTab}
           options={[
+            { value: "reading", label: "Reading" },
             { value: "search",  label: "Search" },
             { value: "saved",   label: "Saved Words (" + savedWords.length + ")" },
-            { value: "reading", label: "Reading" },
           ]}
         />
       </div>
