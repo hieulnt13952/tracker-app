@@ -274,6 +274,33 @@ const db = {
     if (error) console.error("db.deleteVNBankAccount:", error.message);
   },
 
+  // ---- Dictionary words ---------------------------------------
+  async saveDictionaryWord(entry, username) {
+    if (DEV_MODE) return;
+    const { error } = await _supa.from("dictionary_words").insert({
+      id: uid("dw"),
+      word:     entry.word,
+      phonetic: entry.phonetic || null,
+      data:     entry,
+      saved_by: username,
+    });
+    if (error) throw new Error(error.message);
+  },
+
+  async loadDictionaryWords() {
+    if (DEV_MODE) return [];
+    const { data, error } = await _supa.from("dictionary_words")
+      .select("*").order("created_at", { ascending: false });
+    if (error) { console.error("db.loadDictionaryWords:", error.message); return []; }
+    return data || [];
+  },
+
+  async deleteDictionaryWord(id) {
+    if (DEV_MODE) return;
+    const { error } = await _supa.from("dictionary_words").delete().eq("id", id);
+    if (error) console.error("db.deleteDictionaryWord:", error.message);
+  },
+
   // ---- Ticker list --------------------------------------------
   async loadTickerList() {
     if (DEV_MODE) return [];

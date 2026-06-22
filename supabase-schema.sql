@@ -72,6 +72,18 @@ create table if not exists vn_bank_history (
 alter table vn_bank_accounts disable row level security;
 alter table vn_bank_history  disable row level security;
 
+-- ---- Dictionary words -----------------------------------------
+create table if not exists dictionary_words (
+  id          text        primary key,
+  word        text        not null,
+  phonetic    text,
+  data        jsonb       not null,   -- full API entry object
+  saved_by    text        not null,
+  created_at  timestamptz not null default now()
+);
+
+alter table dictionary_words disable row level security;
+
 -- ---- Ticker tape symbols (managed manually in Supabase) -------
 create table if not exists tickerlist (
   symbol     text        primary key,   -- e.g. "FOREXCOM:SPXUSD"

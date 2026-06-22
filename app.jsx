@@ -105,8 +105,9 @@ function AppShell({ currentUser, onLogout, onUpdateUser }) {
     { id: "positions",    label: "Positions & PnL", short: "PnL",      icon: "▤" },
     { id: "tradingview",  label: "TradingView",     short: "TV Sync",  icon: "⟳" },
     { id: "vnbank",       label: "VN Bank Accounts", short: "VN Bank",  icon: "₫" },
-    { id: "wishlist",     label: "Wishlist",         short: "Wishlist", icon: "♡" },
-    { id: "roadmap",      label: "Hieu's Roadmap",  short: "Roadmap",  icon: "◎" },
+    { id: "wishlist",    label: "Wishlist",            short: "Wishlist", icon: "♡" },
+    { id: "dictionary",  label: "Learning Dictionary", short: "Dict",     icon: "α" },
+    { id: "roadmap",     label: "Hieu's Roadmap",     short: "Roadmap",  icon: "◎" },
   ];
 
   const go = (r) => { setRoute(r); setOpenAccount(null); };
@@ -227,7 +228,8 @@ function AppShell({ currentUser, onLogout, onUpdateUser }) {
           {route === "transactions" && <TransactionsView state={state} actions={actions} accountFilter={accountFilter} />}
           {route === "positions" && <PositionsView state={state} actions={actions} accountFilter={accountFilter} />}
           {route === "vnbank" && <VNBankView />}
-          {route === "wishlist" && <WishlistView currentUser={currentUser} />}
+          {route === "wishlist"    && <WishlistView currentUser={currentUser} />}
+          {route === "dictionary"  && <DictionaryView currentUser={currentUser} />}
           {route === "tradingview" && (
             <TradingViewSyncView
               state={state}
