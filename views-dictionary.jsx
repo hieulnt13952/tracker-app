@@ -175,14 +175,75 @@ function DictionarySearch({ currentUser, savedWords, onSave }) {
 }
 
 // ============================================================
+//  Word detail modal (used by the Saved Words tab)
+// ============================================================
+function WordDetailModal({ entry, onClose }) {
+  const definitions = [];
+  (entry.meanings || []).forEach((meaning) => {
+    (meaning.definitions || []).forEach((def) => {
+      definitions.push({
+        partOfSpeech: meaning.partOfSpeech,
+        definition:   def.definition,
+        example:      def.example || null,
+      });
+    });
+  });
+
+  return (
+    <Modal title={entry.word} onClose={onClose} width={680}>
+      {/* Phonetic + audio */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
+        {entry.phonetic && (
+          <span style={{ fontSize: 15, color: "var(--muted)", fontFamily: '"IBM Plex Mono", monospace' }}>
+            {entry.phonetic}
+          </span>
+        )}
+        <AudioPlayer phonetics={entry.phonetics} />
+      </div>
+
+      {/* Definitions table */}
+      <div style={{ overflowX: "auto" }}>
+        <table className="data">
+          <thead>
+            <tr>
+              <th style={{ width: 36 }}>#</th>
+              <th style={{ width: 120 }}>Part of speech</th>
+              <th>Definition</th>
+              <th>Example</th>
+            </tr>
+          </thead>
+          <tbody>
+            {definitions.map((def, i) => (
+              <tr key={i}>
+                <td className="muted mono" style={{ fontSize: 12 }}>{i + 1}</td>
+                <td><span className="tag">{def.partOfSpeech}</span></td>
+                <td style={{ lineHeight: 1.5 }}>{def.definition}</td>
+                <td className="muted" style={{ fontSize: 12.5, fontStyle: def.example ? "italic" : "normal" }}>
+                  {def.example ? "“" + def.example + "”" : "—"}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="modal-actions" style={{ marginTop: 8 }}>
+        <button className="btn ghost" onClick={onClose}>Close</button>
+      </div>
+    </Modal>
+  );
+}
+
+// ============================================================
 //  TAB 2 — Saved words
 // ============================================================
 const PAGE_SIZES = [10, 20, 50, 100];
 
 function DictionarySaved({ savedWords, loading, onDelete }) {
-  const [search,   setSearch]   = useState("");
-  const [pageSize, setPageSize] = useState(20);
-  const [page,     setPage]     = useState(1);
+  const [search,       setSearch]       = useState("");
+  const [pageSize,     setPageSize]     = useState(20);
+  const [page,         setPage]         = useState(1);
+  const [selectedWord, setSelectedWord] = useState(null);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -259,7 +320,15 @@ function DictionarySaved({ savedWords, loading, onDelete }) {
                     <td className="muted mono" style={{ fontSize: 12 }}>
                       {(page - 1) * pageSize + i + 1}
                     </td>
-                    <td><span className="sym">{w.word}</span></td>
+                    <td>
+                      <button
+                        className="dict-word-btn"
+                        onClick={() => setSelectedWord(w.data)}
+                        title="Click to see full definition"
+                      >
+                        {w.word}
+                      </button>
+                    </td>
                     <td className="muted mono" style={{ fontSize: 12 }}>{w.phonetic || "—"}</td>
                     <td>
                       <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
@@ -295,6 +364,10 @@ function DictionarySaved({ savedWords, loading, onDelete }) {
             Next →
           </button>
         </div>
+      )}
+
+      {selectedWord && (
+        <WordDetailModal entry={selectedWord} onClose={() => setSelectedWord(null)} />
       )}
     </div>
   );
