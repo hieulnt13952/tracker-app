@@ -612,7 +612,7 @@ function NPRReading({ currentUser, savedWords, onSave }) {
 
       {/* Empty prompt */}
       {!articles.length && !loadingList && !listError && (
-        <Empty title="Pick a topic" sub="Select a category above or enter any 4-digit NPR topic number." />
+        <Empty title="Pick a topic" sub="Select a topic above and enjoy reading." />
       )}
 
       {/* Three-panel reader */}
