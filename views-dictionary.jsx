@@ -407,11 +407,13 @@ const NPR_TOPICS = [
 ];
 
 // ---- Inline word lookup panel (shown beside the article reader) ----
-function LookupPanel() {
-  const [query,   setQuery]   = useState("");
-  const [entry,   setEntry]   = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error,   setError]   = useState("");
+function LookupPanel({ currentUser, savedWords, onSave }) {
+  const [query,     setQuery]     = useState("");
+  const [entry,     setEntry]     = useState(null);
+  const [loading,   setLoading]   = useState(false);
+  const [error,     setError]     = useState("");
+  const [saving,    setSaving]    = useState(false);
+  const [justSaved, setJustSaved] = useState(false);
 
   async function handleSearch(e) {
     e.preventDefault();
@@ -420,6 +422,7 @@ function LookupPanel() {
     setLoading(true);
     setError("");
     setEntry(null);
+    setJustSaved(false);
     try {
       const data = await fetchDefinition(word);
       setEntry(data[0]);
@@ -428,6 +431,24 @@ function LookupPanel() {
     }
     setLoading(false);
   }
+
+  async function handleSave() {
+    if (!entry) return;
+    setSaving(true);
+    setError("");
+    try {
+      await onSave(entry);
+      setJustSaved(true);
+    } catch (err) {
+      setError(err.message);
+    }
+    setSaving(false);
+  }
+
+  const alreadySaved = entry && (savedWords || []).some(
+    (w) => w.word.toLowerCase() === entry.word.toLowerCase() &&
+           (w.saved_by || "") === (currentUser?.username || "")
+  );
 
   const definitions = useMemo(() => {
     if (!entry) return [];
@@ -470,15 +491,28 @@ function LookupPanel() {
 
         {entry && (
           <div style={{ padding: "12px 14px" }}>
-            {/* Word + phonetic */}
-            <div style={{ marginBottom: 10 }}>
-              <span style={{ fontSize: 17, fontWeight: 700 }}>{entry.word}</span>
-              {entry.phonetic && (
-                <span style={{ fontSize: 12, color: "var(--muted)", fontFamily: '"IBM Plex Mono", monospace', marginLeft: 8 }}>
-                  {entry.phonetic}
-                </span>
+            {/* Word + phonetic + save button */}
+            <div style={{ display: "flex", alignItems: "flex-start", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ fontSize: 17, fontWeight: 700 }}>{entry.word}</span>
+                {entry.phonetic && (
+                  <span style={{ fontSize: 12, color: "var(--muted)", fontFamily: '"IBM Plex Mono", monospace', marginLeft: 8 }}>
+                    {entry.phonetic}
+                  </span>
+                )}
+                <AudioPlayer phonetics={entry.phonetics} />
+              </div>
+              {alreadySaved || justSaved ? (
+                <span style={{ fontSize: 12, color: "var(--pos)", fontWeight: 500, paddingTop: 2 }}>✓ Saved</span>
+              ) : (
+                <button
+                  className={`btn primary${saving ? " disabled" : ""}`}
+                  disabled={saving}
+                  onClick={handleSave}
+                  style={{ fontSize: 12, padding: "3px 10px", whiteSpace: "nowrap" }}>
+                  {saving ? "Saving…" : "Save word"}
+                </button>
               )}
-              <AudioPlayer phonetics={entry.phonetics} />
             </div>
             {/* Definitions list */}
             {definitions.map((d, i) => (
@@ -504,7 +538,7 @@ function LookupPanel() {
   );
 }
 
-function NPRReading() {
+function NPRReading({ currentUser, savedWords, onSave }) {
   const [topicNum,       setTopicNum]       = useState("1001");
   const [articles,       setArticles]       = useState([]);
   const [loadingList,    setLoadingList]    = useState(false);
@@ -637,7 +671,7 @@ function NPRReading() {
           </section>
 
           {/* RIGHT — inline look up */}
-          <LookupPanel />
+          <LookupPanel currentUser={currentUser} savedWords={savedWords} onSave={onSave} />
         </div>
       )}
     </div>
@@ -710,7 +744,9 @@ function DictionaryView({ currentUser }) {
           onDelete={handleDelete}
         />
       )}
-      {tab === "reading" && <NPRReading />}
+      {tab === "reading" && (
+        <NPRReading currentUser={currentUser} savedWords={savedWords} onSave={handleSave} />
+      )}
     </div>
   );
 }
