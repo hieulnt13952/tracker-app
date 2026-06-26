@@ -237,20 +237,36 @@ function WordDetailModal({ entry, onClose }) {
 // ============================================================
 //  Examples modal (OneLook contextual examples API)
 // ============================================================
+// Parse "q:POS:Author Name:Sentence with <b>word</b> highlighted"
+function parseExample(raw) {
+  // format: q:POS:Author:quote
+  const firstColon  = raw.indexOf(":");          // after "q"
+  const secondColon = raw.indexOf(":", firstColon + 1);  // after POS
+  const thirdColon  = raw.indexOf(":", secondColon + 1); // after author
+  if (firstColon < 0 || secondColon < 0 || thirdColon < 0) return null;
+  return {
+    pos:    raw.slice(firstColon + 1, secondColon),
+    author: raw.slice(secondColon + 1, thirdColon).trim(),
+    quote:  raw.slice(thirdColon + 1).trim(),
+  };
+}
+
 function ExamplesModal({ word, onClose }) {
-  const [results, setResults] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState("");
+  const [examples, setExamples] = useState(null);
+  const [loading,  setLoading]  = useState(true);
+  const [error,    setError]    = useState("");
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
       try {
-        const url = "https://www.onelook.com/api/words?max=501&nonorm=1&k=rz_wke&rel_wke=" + encodeURIComponent(word);
-        const res = await fetch(url);
+        const res  = await fetch("/api/fetch-examples?word=" + encodeURIComponent(word));
         if (!res.ok) throw new Error("API error " + res.status);
         const data = await res.json();
-        if (!cancelled) setResults(Array.isArray(data) ? data : []);
+        const parsed = (Array.isArray(data) ? data : [])
+          .map((r) => parseExample(r.word || ""))
+          .filter(Boolean);
+        if (!cancelled) setExamples(parsed);
       } catch (e) {
         if (!cancelled) setError(e.message);
       }
@@ -261,27 +277,32 @@ function ExamplesModal({ word, onClose }) {
   }, [word]);
 
   return (
-    <Modal title={"Examples for: " + word} onClose={onClose} width={680}>
+    <Modal title={"Example sentences: " + word} onClose={onClose} width={720}>
       {loading && (
         <div style={{ textAlign: "center", padding: "32px 0", color: "var(--muted)" }}>Loading…</div>
       )}
       {error && <div className="warn">{error}</div>}
-      {results && results.length === 0 && (
+      {examples && examples.length === 0 && (
         <div style={{ textAlign: "center", padding: "24px 0", color: "var(--muted)" }}>
-          No example context found for this word.
+          No example sentences found for this word.
         </div>
       )}
-      {results && results.length > 0 && (
+      {examples && examples.length > 0 && (
         <>
           <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 16 }}>
-            {results.length} words commonly found alongside <strong>{word}</strong> in example sentences:
+            {examples.length} example sentence{examples.length !== 1 ? "s" : ""} found:
           </p>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
-            {results.map((r, i) => (
-              <span key={i} className="examples-chip" title={"score: " + (r.score || 0)}>
-                {r.word}
-                {r.score ? <span className="examples-chip-score">{r.score}</span> : null}
-              </span>
+          <div className="examples-list">
+            {examples.map((ex, i) => (
+              <div key={i} className="example-card">
+                <div className="example-quote"
+                  dangerouslySetInnerHTML={{ __html: ex.quote }}
+                />
+                <div className="example-meta">
+                  {ex.author && <span className="example-author">{ex.author}</span>}
+                  {ex.pos    && <span className="tag" style={{ fontSize: 11 }}>{ex.pos}</span>}
+                </div>
+              </div>
             ))}
           </div>
         </>
