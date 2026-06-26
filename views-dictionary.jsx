@@ -235,6 +235,65 @@ function WordDetailModal({ entry, onClose }) {
 }
 
 // ============================================================
+//  Examples modal (OneLook contextual examples API)
+// ============================================================
+function ExamplesModal({ word, onClose }) {
+  const [results, setResults] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error,   setError]   = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        const url = "https://www.onelook.com/api/words?max=501&nonorm=1&k=rz_wke&rel_wke=" + encodeURIComponent(word);
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("API error " + res.status);
+        const data = await res.json();
+        if (!cancelled) setResults(Array.isArray(data) ? data : []);
+      } catch (e) {
+        if (!cancelled) setError(e.message);
+      }
+      if (!cancelled) setLoading(false);
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [word]);
+
+  return (
+    <Modal title={"Examples for: " + word} onClose={onClose} width={680}>
+      {loading && (
+        <div style={{ textAlign: "center", padding: "32px 0", color: "var(--muted)" }}>Loading…</div>
+      )}
+      {error && <div className="warn">{error}</div>}
+      {results && results.length === 0 && (
+        <div style={{ textAlign: "center", padding: "24px 0", color: "var(--muted)" }}>
+          No example context found for this word.
+        </div>
+      )}
+      {results && results.length > 0 && (
+        <>
+          <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 16 }}>
+            {results.length} words commonly found alongside <strong>{word}</strong> in example sentences:
+          </p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
+            {results.map((r, i) => (
+              <span key={i} className="examples-chip" title={"score: " + (r.score || 0)}>
+                {r.word}
+                {r.score ? <span className="examples-chip-score">{r.score}</span> : null}
+              </span>
+            ))}
+          </div>
+        </>
+      )}
+      <div className="modal-actions" style={{ marginTop: 20 }}>
+        <button className="btn ghost" onClick={onClose}>Close</button>
+      </div>
+    </Modal>
+  );
+}
+
+// ============================================================
 //  TAB 2 — Saved words
 // ============================================================
 const PAGE_SIZES = [10, 20, 50, 100];
@@ -244,6 +303,7 @@ function DictionarySaved({ savedWords, loading, onDelete }) {
   const [pageSize,     setPageSize]     = useState(20);
   const [page,         setPage]         = useState(1);
   const [selectedWord, setSelectedWord] = useState(null);
+  const [exampleWord,  setExampleWord]  = useState(null);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -293,18 +353,19 @@ function DictionarySaved({ savedWords, loading, onDelete }) {
                 <th>Saved by</th>
                 <th>Date</th>
                 <th></th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={7} style={{ textAlign: "center", padding: 36, color: "var(--muted)" }}>
+                  <td colSpan={8} style={{ textAlign: "center", padding: 36, color: "var(--muted)" }}>
                     Loading…
                   </td>
                 </tr>
               ) : pageRows.length === 0 ? (
                 <tr>
-                  <td colSpan={7}>
+                  <td colSpan={8}>
                     <Empty
                       title="No saved words"
                       sub={search ? "No words match your search." : "Save a word from the Search tab."}
@@ -340,6 +401,11 @@ function DictionarySaved({ savedWords, loading, onDelete }) {
                     </td>
                     <td className="muted" style={{ fontSize: 12 }}>{w.saved_by || "—"}</td>
                     <td className="muted" style={{ fontSize: 12 }}>{fmtDate(w.created_at)}</td>
+                    <td>
+                      <button className="btn ghost examples-btn" onClick={() => setExampleWord(w.word)}>
+                        Example
+                      </button>
+                    </td>
                     <td className="r">
                       <button className="row-del" title="Delete" onClick={() => onDelete(w.id)}>✕</button>
                     </td>
@@ -368,6 +434,9 @@ function DictionarySaved({ savedWords, loading, onDelete }) {
 
       {selectedWord && (
         <WordDetailModal entry={selectedWord} onClose={() => setSelectedWord(null)} />
+      )}
+      {exampleWord && (
+        <ExamplesModal word={exampleWord} onClose={() => setExampleWord(null)} />
       )}
     </div>
   );
