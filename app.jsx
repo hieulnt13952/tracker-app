@@ -107,6 +107,7 @@ function AppShell({ currentUser, onLogout, onUpdateUser }) {
     { id: "vnbank",       label: "VN Bank Accounts", short: "VN Bank",  icon: "₫" },
     { id: "wishlist",    label: "Wishlist",            short: "Wishlist", icon: "♡" },
     { id: "dictionary",  label: "Learning Dictionary", short: "Dict",     icon: "α" },
+    { id: "travel",      label: "Travel History",      short: "Travel",   icon: "✈" },
     { id: "roadmap",     label: "Hieu's Roadmap",     short: "Roadmap",  icon: "◎" },
   ];
 
@@ -234,6 +235,7 @@ function AppShell({ currentUser, onLogout, onUpdateUser }) {
           {route === "vnbank" && <VNBankView />}
           {route === "wishlist"    && <WishlistView currentUser={currentUser} />}
           {route === "dictionary"  && <DictionaryView currentUser={currentUser} />}
+          {route === "travel"      && <TravelView currentUser={currentUser} />}
           {route === "tradingview" && (
             <TradingViewSyncView
               state={state}

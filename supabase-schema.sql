@@ -228,3 +228,20 @@ alter table users add column if not exists avatar_url text;
 -- 5. Add created_by and rank to wishlist_items (if table already exists)
 alter table wishlist_items add column if not exists created_by text;
 alter table wishlist_items add column if not exists rank integer not null default 0;
+
+-- ---- Travel history -------------------------------------------
+create table if not exists travel_trips (
+  id          text  primary key,
+  origin      text  not null,
+  destination text  not null,
+  start_date  date  not null,
+  end_date    date  not null,
+  username    text,
+  purpose     text,
+  created_by  text,
+  created_at  timestamptz not null default now()
+);
+
+alter table travel_trips disable row level security;
+-- If RLS is enabled, run this instead of the line above:
+-- create policy "anon_all" on travel_trips for all to anon using (true) with check (true);

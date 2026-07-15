@@ -344,6 +344,42 @@ const db = {
     );
   },
 
+  // ---- Travel history --------------------------------------------
+  async loadTravelTrips() {
+    if (DEV_MODE) return [];
+    const { data, error } = await _supa
+      .from("travel_trips")
+      .select("*")
+      .order("start_date", { ascending: false });
+    if (error) throw error;
+    return data;
+  },
+
+  async addTravelTrip(trip) {
+    if (DEV_MODE) return;
+    const { error } = await _supa.from("travel_trips").insert([trip]);
+    if (error) throw error;
+  },
+
+  async updateTravelTrip(id, updates) {
+    if (DEV_MODE) return;
+    const { error } = await _supa.from("travel_trips").update(updates).eq("id", id);
+    if (error) throw error;
+  },
+
+  async deleteTravelTrip(id) {
+    if (DEV_MODE) return;
+    const { error } = await _supa.from("travel_trips").delete().eq("id", id);
+    if (error) throw error;
+  },
+
+  async loadUsers() {
+    if (DEV_MODE) return [];
+    const { data, error } = await _supa.from("users").select("username, display_name").order("username");
+    if (error) throw error;
+    return data;
+  },
+
   // ---- User avatar -----------------------------------------------
   async uploadUserAvatar(file, username) {
     if (DEV_MODE) return null;
