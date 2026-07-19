@@ -1,5 +1,5 @@
 // ============================================================
-//  views-travel.jsx — Travel History
+//  views-travel.jsx — Travel Logs (History · Itinerary · Things to buy)
 // ============================================================
 
 function tripDays(start, end) {
@@ -8,8 +8,30 @@ function tripDays(start, end) {
   return diff < 0 ? 0 : diff + 1;
 }
 
+const TRAVEL_MODES = [
+  { value: "flight", label: "Flight" },
+  { value: "train",  label: "Train"  },
+  { value: "bus",    label: "Bus"    },
+  { value: "cruise", label: "Cruise" },
+  { value: "car",    label: "Car"    },
+  { value: "other",  label: "Other"  },
+];
+
+const FOOD_CATEGORIES = [
+  { value: "restaurant", label: "Restaurant" },
+  { value: "dish",       label: "Dish"       },
+  { value: "cuisine",    label: "Cuisine"    },
+];
+
+const SHOP_STATUSES = [
+  { value: "new",       label: "New"        },
+  { value: "will_buy",  label: "Will buy"   },
+  { value: "done",      label: "Done"       },
+  { value: "cancelled", label: "Cancelled"  },
+];
+
 // ============================================================
-//  Add / Edit modal
+//  Add / Edit trip modal
 // ============================================================
 function TripModal({ trip, users, currentUser, onSave, onClose }) {
   const isEdit = !!trip;
@@ -131,11 +153,10 @@ function TripModal({ trip, users, currentUser, onSave, onClose }) {
 }
 
 // ============================================================
-//  Main view
+//  SUB-TAB 1 — Travel History
 // ============================================================
-function TravelView({ currentUser }) {
+function TravelHistoryTab({ currentUser, users }) {
   const [trips,      setTrips]      = useState([]);
-  const [users,      setUsers]      = useState([]);
   const [loading,    setLoading]    = useState(true);
   const [userFilter, setUserFilter] = useState("all");
   const [yearFilter, setYearFilter] = useState("all");
@@ -148,14 +169,10 @@ function TravelView({ currentUser }) {
   async function loadAll() {
     setLoading(true);
     try {
-      const [tripData, userData] = await Promise.all([
-        db.loadTravelTrips(),
-        db.loadUsers(),
-      ]);
+      const tripData = await db.loadTravelTrips();
       setTrips(tripData || []);
-      setUsers(userData || []);
     } catch (e) {
-      console.error("TravelView.loadAll:", e.message);
+      console.error("TravelHistoryTab.loadAll:", e.message);
     }
     setLoading(false);
   }
@@ -200,18 +217,13 @@ function TravelView({ currentUser }) {
   );
 
   return (
-    <div className="view">
-      <header className="view-head">
-        <div>
-          <h1>Travel History</h1>
-          <p className="view-sub">
-            Track trips, destinations and travel days · {trips.length} trip{trips.length !== 1 ? "s" : ""} logged.
-          </p>
-        </div>
-        <div className="head-actions">
-          <button className="btn primary" onClick={() => setShowAdd(true)}>+ Add trip</button>
-        </div>
-      </header>
+    <div>
+      <div className="toolbar" style={{ marginBottom: "1rem" }}>
+        <span className="toolbar-meta">
+          {trips.length} trip{trips.length !== 1 ? "s" : ""} logged
+        </span>
+        <button className="btn primary" style={{ marginLeft: "auto" }} onClick={() => setShowAdd(true)}>+ Add trip</button>
+      </div>
 
       {/* Stats */}
       <div className="stat-grid four" style={{ marginBottom: 20 }}>
@@ -343,6 +355,552 @@ function TravelView({ currentUser }) {
           onClose={() => setEditTrip(null)}
         />
       )}
+    </div>
+  );
+}
+
+// ============================================================
+//  SUB-TAB 2 — Itinerary
+// ============================================================
+function PlaceModal({ place, users, currentUser, onSave, onClose }) {
+  const isEdit = !!place;
+  const [form, setForm] = useState({
+    city:        place?.city        || "",
+    country:     place?.country     || "",
+    start_date:  place?.start_date  || "",
+    end_date:    place?.end_date    || "",
+    travel_mode: place?.travel_mode || "flight",
+    username:    place?.username    || currentUser?.username || "",
+    note:        place?.note        || "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [error,  setError]  = useState("");
+
+  function set(k, v) { setForm((f) => ({ ...f, [k]: v })); }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    if (!form.city.trim() || !form.country.trim()) {
+      setError("Please fill in city and country."); return;
+    }
+    if (form.start_date && form.end_date && new Date(form.end_date) < new Date(form.start_date)) {
+      setError("End date must be on or after start date."); return;
+    }
+    setSaving(true); setError("");
+    try {
+      const payload = {
+        city:        form.city.trim(),
+        country:     form.country.trim(),
+        start_date:  form.start_date || null,
+        end_date:    form.end_date   || null,
+        travel_mode: form.travel_mode,
+        username:    form.username || currentUser?.username || "",
+        note:        form.note.trim(),
+      };
+      if (isEdit) {
+        await db.updateItineraryPlace(place.id, payload);
+      } else {
+        await db.addItineraryPlace({
+          ...payload,
+          id:         uid("place"),
+          created_by: currentUser?.username || "",
+        });
+      }
+      onSave();
+    } catch (err) {
+      setError(err.message);
+    }
+    setSaving(false);
+  }
+
+  return (
+    <Modal title={isEdit ? "Edit place" : "Add place"} onClose={onClose} width={560}>
+      <form onSubmit={handleSubmit}>
+        <div className="form-grid-2">
+          <div className="form-field">
+            <label>City *</label>
+            <input type="text" value={form.city} placeholder="e.g. Kyoto"
+              onChange={(e) => set("city", e.target.value)} />
+          </div>
+          <div className="form-field">
+            <label>Country *</label>
+            <input type="text" value={form.country} placeholder="e.g. Japan"
+              onChange={(e) => set("country", e.target.value)} />
+          </div>
+          <div className="form-field">
+            <label>From date</label>
+            <input type="date" value={form.start_date}
+              onChange={(e) => set("start_date", e.target.value)} />
+          </div>
+          <div className="form-field">
+            <label>To date</label>
+            <input type="date" value={form.end_date}
+              onChange={(e) => set("end_date", e.target.value)} />
+          </div>
+          <div className="form-field">
+            <label>Travel by</label>
+            <select value={form.travel_mode} onChange={(e) => set("travel_mode", e.target.value)}>
+              {TRAVEL_MODES.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
+            </select>
+          </div>
+          <div className="form-field">
+            <label>Traveler</label>
+            <select value={form.username} onChange={(e) => set("username", e.target.value)}>
+              {users.map((u) => (
+                <option key={u.username} value={u.username}>
+                  {u.display_name ? u.display_name + " (" + u.username + ")" : u.username}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="form-field" style={{ marginTop: 14 }}>
+          <label>Note</label>
+          <textarea rows={3} value={form.note}
+            placeholder="e.g. Book ryokan early, check festival dates…"
+            onChange={(e) => set("note", e.target.value)}
+            style={{ resize: "vertical" }} />
+        </div>
+
+        {error && <div className="warn" style={{ marginTop: 10 }}>{error}</div>}
+
+        <div className="modal-actions" style={{ marginTop: 18 }}>
+          <button type="button" className="btn ghost" onClick={onClose}>Cancel</button>
+          <button type="submit"
+            className={"btn primary" + (saving ? " disabled" : "")}
+            disabled={saving}>
+            {saving ? "Saving…" : isEdit ? "Save changes" : "Add place"}
+          </button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function FoodListModal({ place, foodItems, onAdd, onDelete, onClose }) {
+  const [name,     setName]     = useState("");
+  const [category, setCategory] = useState("restaurant");
+  const [saving,   setSaving]   = useState(false);
+  const [error,    setError]    = useState("");
+
+  async function handleAdd() {
+    if (!name.trim() || saving) return;
+    setSaving(true); setError("");
+    try {
+      await onAdd({ name: name.trim(), category });
+      setName("");
+    } catch (e) {
+      setError(e.message || "Failed to add item");
+    }
+    setSaving(false);
+  }
+
+  return (
+    <Modal title={`Food to try — ${place.city}, ${place.country}`} onClose={onClose} width={520}>
+      <div className="form-grid-2" style={{ alignItems: "end" }}>
+        <div className="form-field" style={{ gridColumn: "1 / span 1" }}>
+          <label>Restaurant / dish / cuisine</label>
+          <input type="text" value={name} placeholder="e.g. Kikunoi, Kaiseki, Yudofu"
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAdd(); } }}
+            onChange={(e) => setName(e.target.value)} />
+        </div>
+        <div className="form-field">
+          <label>Type</label>
+          <select value={category} onChange={(e) => setCategory(e.target.value)}>
+            {FOOD_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+          </select>
+        </div>
+      </div>
+      <div style={{ marginTop: 10, textAlign: "right" }}>
+        <button type="button" className={"btn primary" + (saving || !name.trim() ? " disabled" : "")}
+          disabled={saving || !name.trim()} onClick={handleAdd}>
+          {saving ? "Adding…" : "+ Add"}
+        </button>
+      </div>
+
+      {error && <div className="warn" style={{ marginTop: 10 }}>{error}</div>}
+
+      <div className="food-list" style={{ marginTop: 16 }}>
+        {foodItems.length === 0 ? (
+          <div className="muted" style={{ fontSize: 13, padding: "10px 0" }}>Nothing added yet.</div>
+        ) : foodItems.map((f) => (
+          <div key={f.id} className="food-list-row">
+            <span className={`tag food-tag-${f.category}`}>{f.category}</span>
+            <span className="food-list-name">{f.name}</span>
+            <button className="icon-btn" title="Remove" onClick={() => onDelete(f.id)}>✕</button>
+          </div>
+        ))}
+      </div>
+
+      <div className="modal-actions" style={{ marginTop: 18 }}>
+        <button type="button" className="btn ghost" onClick={onClose}>Close</button>
+      </div>
+    </Modal>
+  );
+}
+
+function ItineraryTab({ currentUser, users }) {
+  const [places,     setPlaces]     = useState([]);
+  const [foodItems,  setFoodItems]  = useState([]);
+  const [loading,    setLoading]    = useState(true);
+  const [showAdd,    setShowAdd]    = useState(false);
+  const [editPlace,  setEditPlace]  = useState(null);
+  const [foodPlace,  setFoodPlace]  = useState(null);
+  const [deleteId,   setDeleteId]   = useState(null);
+
+  useEffect(() => { loadAll(); }, []);
+
+  async function loadAll() {
+    setLoading(true);
+    try {
+      const [placeData, foodData] = await Promise.all([
+        db.loadItineraryPlaces(),
+        db.loadFoodItems(),
+      ]);
+      setPlaces(placeData || []);
+      setFoodItems(foodData || []);
+    } catch (e) {
+      console.error("ItineraryTab.loadAll:", e.message);
+    }
+    setLoading(false);
+  }
+
+  async function handleDelete(id) {
+    if (deleteId !== id) { setDeleteId(id); return; }
+    try {
+      await db.deleteItineraryPlace(id);
+      setPlaces((prev) => prev.filter((p) => p.id !== id));
+      setFoodItems((prev) => prev.filter((f) => f.place_id !== id));
+    } catch (e) {
+      console.error("deleteItineraryPlace:", e.message);
+    }
+    setDeleteId(null);
+  }
+
+  async function handleAddFood(place, { name, category }) {
+    const item = { id: uid("food"), place_id: place.id, name, category };
+    await db.addFoodItem(item);
+    setFoodItems((prev) => [...prev, item]);
+  }
+
+  async function handleDeleteFood(id) {
+    await db.deleteFoodItem(id);
+    setFoodItems((prev) => prev.filter((f) => f.id !== id));
+  }
+
+  const foodCountByPlace = useMemo(() => {
+    const m = {};
+    foodItems.forEach((f) => { m[f.place_id] = (m[f.place_id] || 0) + 1; });
+    return m;
+  }, [foodItems]);
+
+  const sortedPlaces = useMemo(() =>
+    [...places].sort((a, b) => (a.start_date || "9999").localeCompare(b.start_date || "9999")),
+    [places]
+  );
+
+  return (
+    <div>
+      <div className="toolbar" style={{ marginBottom: "1rem" }}>
+        <span className="toolbar-meta">
+          {places.length} place{places.length !== 1 ? "s" : ""} planned
+        </span>
+        <button className="btn primary" style={{ marginLeft: "auto" }} onClick={() => setShowAdd(true)}>+ Add place</button>
+      </div>
+
+      <section className="panel">
+        <div className="panel-body no-pad">
+          <table className="data">
+            <thead>
+              <tr>
+                <th style={{ width: 36 }}>#</th>
+                <th>Place</th>
+                <th style={{ width: 100 }}>From</th>
+                <th style={{ width: 100 }}>To</th>
+                <th style={{ width: 72 }}>Days</th>
+                <th style={{ width: 110 }}>Travel by</th>
+                <th style={{ width: 150 }}>Food to try</th>
+                <th style={{ width: 80 }}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={8} style={{ textAlign: "center", padding: 36, color: "var(--muted)" }}>
+                    Loading…
+                  </td>
+                </tr>
+              ) : sortedPlaces.length === 0 ? (
+                <tr>
+                  <td colSpan={8}>
+                    <Empty
+                      title="No places yet"
+                      sub="Click + Add place to start planning your itinerary."
+                    />
+                  </td>
+                </tr>
+              ) : sortedPlaces.map((p, i) => {
+                const days = tripDays(p.start_date, p.end_date);
+                const mode = TRAVEL_MODES.find((m) => m.value === p.travel_mode);
+                return (
+                  <tr key={p.id}>
+                    <td className="muted mono" style={{ fontSize: 12 }}>{i + 1}</td>
+                    <td style={{ fontSize: 13, fontWeight: 500 }}>{p.city}, {p.country}</td>
+                    <td className="mono muted" style={{ fontSize: 12 }}>{p.start_date ? fmtDate(p.start_date) : "—"}</td>
+                    <td className="mono muted" style={{ fontSize: 12 }}>{p.end_date ? fmtDate(p.end_date) : "—"}</td>
+                    <td>{days ? <span className="trip-days-badge">{days}</span> : <span className="muted">—</span>}</td>
+                    <td><span className={`mode-badge mode-${p.travel_mode}`}>{mode ? mode.label : p.travel_mode || "—"}</span></td>
+                    <td>
+                      <button className="btn ghost" style={{ padding: "4px 10px", fontSize: 12.5 }} onClick={() => setFoodPlace(p)}>
+                        Food to try ({foodCountByPlace[p.id] || 0})
+                      </button>
+                    </td>
+                    <td className="r" style={{ whiteSpace: "nowrap" }}>
+                      <button className="icon-btn" title="Edit" onClick={() => setEditPlace(p)}>✎</button>
+                      <button
+                        className={"row-del" + (deleteId === p.id ? " confirm" : "")}
+                        title={deleteId === p.id ? "Click again to confirm" : "Delete"}
+                        onClick={() => handleDelete(p.id)}
+                        onBlur={() => setDeleteId(null)}
+                      >
+                        {deleteId === p.id ? "Confirm" : "✕"}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {showAdd && (
+        <PlaceModal
+          users={users}
+          currentUser={currentUser}
+          onSave={() => { setShowAdd(false); loadAll(); }}
+          onClose={() => setShowAdd(false)}
+        />
+      )}
+      {editPlace && (
+        <PlaceModal
+          place={editPlace}
+          users={users}
+          currentUser={currentUser}
+          onSave={() => { setEditPlace(null); loadAll(); }}
+          onClose={() => setEditPlace(null)}
+        />
+      )}
+      {foodPlace && (
+        <FoodListModal
+          place={foodPlace}
+          foodItems={foodItems.filter((f) => f.place_id === foodPlace.id)}
+          onAdd={(item) => handleAddFood(foodPlace, item)}
+          onDelete={handleDeleteFood}
+          onClose={() => setFoodPlace(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+//  SUB-TAB 3 — Things to buy
+// ============================================================
+function ShoppingTab({ currentUser }) {
+  const [items,        setItems]        = useState([]);
+  const [loading,       setLoading]      = useState(true);
+  const [newItem,       setNewItem]      = useState("");
+  const [adding,        setAdding]       = useState(false);
+  const [statusFilter,  setStatusFilter] = useState("all");
+  const [deleteId,      setDeleteId]     = useState(null);
+  const [error,         setError]        = useState("");
+
+  useEffect(() => { loadAll(); }, []);
+
+  async function loadAll() {
+    setLoading(true);
+    try {
+      const data = await db.loadShoppingItems();
+      setItems(data || []);
+    } catch (e) {
+      console.error("ShoppingTab.loadAll:", e.message);
+    }
+    setLoading(false);
+  }
+
+  async function handleAdd() {
+    if (!newItem.trim() || adding) return;
+    setAdding(true); setError("");
+    try {
+      const item = {
+        id:         uid("buy"),
+        item:       newItem.trim(),
+        status:     "new",
+        created_by: currentUser?.username || "",
+      };
+      await db.addShoppingItem(item);
+      setItems((prev) => [item, ...prev]);
+      setNewItem("");
+    } catch (e) {
+      setError(e.message || "Failed to add item");
+    }
+    setAdding(false);
+  }
+
+  async function handleStatusChange(id, status) {
+    setItems((prev) => prev.map((it) => it.id === id ? { ...it, status } : it));
+    try {
+      await db.updateShoppingItem(id, { status });
+    } catch (e) {
+      console.error("updateShoppingItem:", e.message);
+    }
+  }
+
+  async function handleDelete(id) {
+    if (deleteId !== id) { setDeleteId(id); return; }
+    try {
+      await db.deleteShoppingItem(id);
+      setItems((prev) => prev.filter((it) => it.id !== id));
+    } catch (e) {
+      console.error("deleteShoppingItem:", e.message);
+    }
+    setDeleteId(null);
+  }
+
+  const filtered = useMemo(() => {
+    if (statusFilter === "all") return items;
+    return items.filter((it) => it.status === statusFilter);
+  }, [items, statusFilter]);
+
+  const counts = useMemo(() => {
+    const c = { new: 0, will_buy: 0, done: 0, cancelled: 0 };
+    items.forEach((it) => { if (c[it.status] !== undefined) c[it.status]++; });
+    return c;
+  }, [items]);
+
+  return (
+    <div>
+      <div className="toolbar" style={{ marginBottom: "1rem" }}>
+        <input
+          type="text" value={newItem} placeholder="Thing to buy…" style={{ maxWidth: 320 }}
+          onChange={(e) => setNewItem(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
+        />
+        <button className={"btn primary" + (adding || !newItem.trim() ? " disabled" : "")}
+          disabled={adding || !newItem.trim()} onClick={handleAdd}>
+          {adding ? "Adding…" : "+ Add"}
+        </button>
+        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={{ width: "auto", marginLeft: "auto" }}>
+          <option value="all">All statuses</option>
+          {SHOP_STATUSES.map((s) => (
+            <option key={s.value} value={s.value}>{s.label} ({counts[s.value] || 0})</option>
+          ))}
+        </select>
+      </div>
+
+      {error && <div className="warn" style={{ marginBottom: "1rem" }}>{error}</div>}
+
+      <section className="panel">
+        <div className="panel-body no-pad">
+          <table className="data">
+            <thead>
+              <tr>
+                <th style={{ width: 36 }}>#</th>
+                <th>Item</th>
+                <th style={{ width: 150 }}>Status</th>
+                <th style={{ width: 100 }}>Added</th>
+                <th style={{ width: 60 }}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={5} style={{ textAlign: "center", padding: 36, color: "var(--muted)" }}>
+                    Loading…
+                  </td>
+                </tr>
+              ) : filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={5}>
+                    <Empty
+                      title={items.length ? "No items match this filter" : "Nothing on the list yet"}
+                      sub={items.length ? "Try a different status filter." : "Add the first thing you want to buy above."}
+                    />
+                  </td>
+                </tr>
+              ) : filtered.map((it, i) => (
+                <tr key={it.id}>
+                  <td className="muted mono" style={{ fontSize: 12 }}>{i + 1}</td>
+                  <td style={{ fontSize: 13, textDecoration: it.status === "cancelled" ? "line-through" : "none" }}>
+                    {it.item}
+                  </td>
+                  <td>
+                    <select
+                      className={`shop-status-select shop-status-${it.status}`}
+                      value={it.status}
+                      onChange={(e) => handleStatusChange(it.id, e.target.value)}
+                    >
+                      {SHOP_STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                    </select>
+                  </td>
+                  <td className="mono muted" style={{ fontSize: 12 }}>{fmtDate(it.created_at)}</td>
+                  <td className="r">
+                    <button
+                      className={"row-del" + (deleteId === it.id ? " confirm" : "")}
+                      title={deleteId === it.id ? "Click again to confirm" : "Delete"}
+                      onClick={() => handleDelete(it.id)}
+                      onBlur={() => setDeleteId(null)}
+                    >
+                      {deleteId === it.id ? "Confirm" : "✕"}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+// ============================================================
+//  Main view — Travel Logs
+// ============================================================
+function TravelView({ currentUser }) {
+  const [tab,   setTab]   = useState("history");
+  const [users, setUsers] = useState([]);
+
+  useEffect(() => {
+    db.loadUsers().then((u) => setUsers(u || [])).catch((e) => console.error("TravelView.loadUsers:", e.message));
+  }, []);
+
+  return (
+    <div className="view">
+      <header className="view-head">
+        <div>
+          <h1>Travel Logs</h1>
+          <p className="view-sub">Trip history, itinerary planning, and your travel shopping list.</p>
+        </div>
+      </header>
+
+      <div style={{ marginBottom: "1.25rem" }}>
+        <Segmented
+          value={tab}
+          onChange={setTab}
+          options={[
+            { value: "history",   label: "Travel History" },
+            { value: "itinerary", label: "Itinerary" },
+            { value: "shopping",  label: "Things to Buy" },
+          ]}
+        />
+      </div>
+
+      {tab === "history"   && <TravelHistoryTab currentUser={currentUser} users={users} />}
+      {tab === "itinerary" && <ItineraryTab currentUser={currentUser} users={users} />}
+      {tab === "shopping"  && <ShoppingTab currentUser={currentUser} />}
     </div>
   );
 }

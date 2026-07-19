@@ -245,3 +245,47 @@ create table if not exists travel_trips (
 alter table travel_trips disable row level security;
 -- If RLS is enabled, run this instead of the line above:
 -- create policy "anon_all" on travel_trips for all to anon using (true) with check (true);
+
+-- ---- Travel itinerary — places to travel ------------------------
+create table if not exists travel_itinerary_places (
+  id          text  primary key,
+  city        text  not null,
+  country     text  not null,
+  start_date  date,
+  end_date    date,
+  travel_mode text  check (travel_mode in ('flight', 'train', 'bus', 'cruise', 'car', 'other')),
+  note        text,
+  username    text,
+  created_by  text,
+  created_at  timestamptz not null default now()
+);
+
+alter table travel_itinerary_places enable row level security;
+create policy "anon_all" on travel_itinerary_places for all to anon using (true) with check (true);
+
+-- ---- Travel itinerary — restaurants / dishes / cuisine to try ---
+create table if not exists travel_food_items (
+  id          text  primary key,
+  place_id    text  not null references travel_itinerary_places(id) on delete cascade,
+  name        text  not null,
+  category    text  not null default 'restaurant' check (category in ('restaurant', 'dish', 'cuisine')),
+  note        text,
+  created_at  timestamptz not null default now()
+);
+
+alter table travel_food_items enable row level security;
+create policy "anon_all" on travel_food_items for all to anon using (true) with check (true);
+
+-- ---- Travel — things to buy checklist ----------------------------
+create table if not exists travel_shopping_items (
+  id          text  primary key,
+  item        text  not null,
+  status      text  not null default 'new' check (status in ('new', 'will_buy', 'done', 'cancelled')),
+  note        text,
+  created_by  text,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now()
+);
+
+alter table travel_shopping_items enable row level security;
+create policy "anon_all" on travel_shopping_items for all to anon using (true) with check (true);

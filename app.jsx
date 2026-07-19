@@ -107,7 +107,7 @@ function AppShell({ currentUser, onLogout, onUpdateUser }) {
     { id: "vnbank",       label: "VN Bank Accounts", short: "VN Bank",  icon: "₫" },
     { id: "wishlist",    label: "Wishlist",            short: "Wishlist", icon: "♡" },
     { id: "dictionary",  label: "Learning Dictionary", short: "Dict",     icon: "α" },
-    { id: "travel",      label: "Travel History",      short: "Travel",   icon: "✈" },
+    { id: "travel",      label: "Travel Logs",         short: "Travel",   icon: "✈" },
     { id: "roadmap",     label: "Hieu's Roadmap",     short: "Roadmap",  icon: "◎" },
   ];
 
@@ -162,10 +162,6 @@ function AppShell({ currentUser, onLogout, onUpdateUser }) {
           ))}
         </nav>
         <div className="sidebar-foot">
-          <div className="ecopr-counter">
-            <span className="ecopr-num">{Math.floor((Date.now() - new Date("2026-05-28").getTime()) / 86400000)}</span>
-            <span className="ecopr-lbl">Days since eCoPr</span>
-          </div>
           <div className="equity-mini">
             <span className="lbl">Total equity</span>
             <span className="val mono">{fmtMoney(book.total.equity)}</span>

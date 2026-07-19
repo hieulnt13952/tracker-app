@@ -373,6 +373,90 @@ const db = {
     if (error) throw error;
   },
 
+  // ---- Travel itinerary — places -----------------------------------
+  async loadItineraryPlaces() {
+    if (DEV_MODE) return [];
+    const { data, error } = await _supa
+      .from("travel_itinerary_places")
+      .select("*")
+      .order("start_date", { ascending: true });
+    if (error) throw error;
+    return data;
+  },
+
+  async addItineraryPlace(place) {
+    if (DEV_MODE) return;
+    const { error } = await _supa.from("travel_itinerary_places").insert([place]);
+    if (error) throw error;
+  },
+
+  async updateItineraryPlace(id, updates) {
+    if (DEV_MODE) return;
+    const { error } = await _supa.from("travel_itinerary_places").update(updates).eq("id", id);
+    if (error) throw error;
+  },
+
+  async deleteItineraryPlace(id) {
+    if (DEV_MODE) return;
+    const { error } = await _supa.from("travel_itinerary_places").delete().eq("id", id);
+    if (error) throw error;
+  },
+
+  // ---- Travel itinerary — food to try --------------------------------
+  async loadFoodItems() {
+    if (DEV_MODE) return [];
+    const { data, error } = await _supa
+      .from("travel_food_items")
+      .select("*")
+      .order("created_at", { ascending: true });
+    if (error) throw error;
+    return data;
+  },
+
+  async addFoodItem(item) {
+    if (DEV_MODE) return;
+    const { error } = await _supa.from("travel_food_items").insert([item]);
+    if (error) throw error;
+  },
+
+  async deleteFoodItem(id) {
+    if (DEV_MODE) return;
+    const { error } = await _supa.from("travel_food_items").delete().eq("id", id);
+    if (error) throw error;
+  },
+
+  // ---- Travel — things to buy ----------------------------------------
+  async loadShoppingItems() {
+    if (DEV_MODE) return [];
+    const { data, error } = await _supa
+      .from("travel_shopping_items")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    return data;
+  },
+
+  async addShoppingItem(item) {
+    if (DEV_MODE) return;
+    const { error } = await _supa.from("travel_shopping_items").insert([item]);
+    if (error) throw error;
+  },
+
+  async updateShoppingItem(id, updates) {
+    if (DEV_MODE) return;
+    const { error } = await _supa
+      .from("travel_shopping_items")
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq("id", id);
+    if (error) throw error;
+  },
+
+  async deleteShoppingItem(id) {
+    if (DEV_MODE) return;
+    const { error } = await _supa.from("travel_shopping_items").delete().eq("id", id);
+    if (error) throw error;
+  },
+
   async loadUsers() {
     if (DEV_MODE) return [];
     const { data, error } = await _supa.from("users").select("username, display_name").order("username");
