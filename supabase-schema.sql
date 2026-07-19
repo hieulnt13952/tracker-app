@@ -249,8 +249,8 @@ alter table travel_trips disable row level security;
 -- ---- Travel itinerary — places to travel ------------------------
 create table if not exists travel_itinerary_places (
   id          text  primary key,
-  city        text  not null,
-  country     text  not null,
+  origin      text,
+  destination text  not null,
   start_date  date,
   end_date    date,
   travel_mode text  check (travel_mode in ('flight', 'train', 'bus', 'cruise', 'car', 'other')),
@@ -262,6 +262,16 @@ create table if not exists travel_itinerary_places (
 
 alter table travel_itinerary_places enable row level security;
 create policy "anon_all" on travel_itinerary_places for all to anon using (true) with check (true);
+
+-- MIGRATION — run this if travel_itinerary_places was already created with
+-- the old city/country columns (safe to run multiple times):
+--
+--   alter table travel_itinerary_places add column if not exists origin text;
+--   alter table travel_itinerary_places add column if not exists destination text;
+--   update travel_itinerary_places set destination = trim(both ', ' from coalesce(city, '') || ', ' || coalesce(country, ''))
+--     where destination is null;
+--   alter table travel_itinerary_places drop column if exists city;
+--   alter table travel_itinerary_places drop column if exists country;
 
 -- ---- Travel itinerary — restaurants / dishes / cuisine to try ---
 create table if not exists travel_food_items (

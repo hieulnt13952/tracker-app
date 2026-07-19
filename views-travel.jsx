@@ -365,8 +365,8 @@ function TravelHistoryTab({ currentUser, users }) {
 function PlaceModal({ place, users, currentUser, onSave, onClose }) {
   const isEdit = !!place;
   const [form, setForm] = useState({
-    city:        place?.city        || "",
-    country:     place?.country     || "",
+    origin:      place?.origin      || "",
+    destination: place?.destination || "",
     start_date:  place?.start_date  || "",
     end_date:    place?.end_date    || "",
     travel_mode: place?.travel_mode || "flight",
@@ -380,8 +380,8 @@ function PlaceModal({ place, users, currentUser, onSave, onClose }) {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!form.city.trim() || !form.country.trim()) {
-      setError("Please fill in city and country."); return;
+    if (!form.destination.trim()) {
+      setError("Please fill in the destination."); return;
     }
     if (form.start_date && form.end_date && new Date(form.end_date) < new Date(form.start_date)) {
       setError("End date must be on or after start date."); return;
@@ -389,8 +389,8 @@ function PlaceModal({ place, users, currentUser, onSave, onClose }) {
     setSaving(true); setError("");
     try {
       const payload = {
-        city:        form.city.trim(),
-        country:     form.country.trim(),
+        origin:      form.origin.trim(),
+        destination: form.destination.trim(),
         start_date:  form.start_date || null,
         end_date:    form.end_date   || null,
         travel_mode: form.travel_mode,
@@ -418,22 +418,22 @@ function PlaceModal({ place, users, currentUser, onSave, onClose }) {
       <form onSubmit={handleSubmit}>
         <div className="form-grid-2">
           <div className="form-field">
-            <label>City *</label>
-            <input type="text" value={form.city} placeholder="e.g. Kyoto"
-              onChange={(e) => set("city", e.target.value)} />
+            <label>From</label>
+            <input type="text" value={form.origin} placeholder="e.g. Toronto, Canada"
+              onChange={(e) => set("origin", e.target.value)} />
           </div>
           <div className="form-field">
-            <label>Country *</label>
-            <input type="text" value={form.country} placeholder="e.g. Japan"
-              onChange={(e) => set("country", e.target.value)} />
+            <label>To *</label>
+            <input type="text" value={form.destination} placeholder="e.g. Kyoto, Japan"
+              onChange={(e) => set("destination", e.target.value)} />
           </div>
           <div className="form-field">
-            <label>From date</label>
+            <label>Start date</label>
             <input type="date" value={form.start_date}
               onChange={(e) => set("start_date", e.target.value)} />
           </div>
           <div className="form-field">
-            <label>To date</label>
+            <label>End date</label>
             <input type="date" value={form.end_date}
               onChange={(e) => set("end_date", e.target.value)} />
           </div>
@@ -478,7 +478,7 @@ function PlaceModal({ place, users, currentUser, onSave, onClose }) {
   );
 }
 
-function FoodListModal({ place, foodItems, onAdd, onDelete, onClose }) {
+function FoodToTryPanel({ items, onAdd, onDelete }) {
   const [name,     setName]     = useState("");
   const [category, setCategory] = useState("restaurant");
   const [saving,   setSaving]   = useState(false);
@@ -497,34 +497,26 @@ function FoodListModal({ place, foodItems, onAdd, onDelete, onClose }) {
   }
 
   return (
-    <Modal title={`Food to try — ${place.city}, ${place.country}`} onClose={onClose} width={520}>
-      <div className="form-grid-2" style={{ alignItems: "end" }}>
-        <div className="form-field" style={{ gridColumn: "1 / span 1" }}>
-          <label>Restaurant / dish / cuisine</label>
-          <input type="text" value={name} placeholder="e.g. Kikunoi, Kaiseki, Yudofu"
-            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAdd(); } }}
-            onChange={(e) => setName(e.target.value)} />
-        </div>
-        <div className="form-field">
-          <label>Type</label>
-          <select value={category} onChange={(e) => setCategory(e.target.value)}>
-            {FOOD_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
-          </select>
-        </div>
-      </div>
-      <div style={{ marginTop: 10, textAlign: "right" }}>
+    <div className="food-panel">
+      <div className="food-panel-add">
+        <input type="text" value={name} placeholder="e.g. Kikunoi, Kaiseki, Yudofu"
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAdd(); } }}
+          onChange={(e) => setName(e.target.value)} />
+        <select value={category} onChange={(e) => setCategory(e.target.value)}>
+          {FOOD_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+        </select>
         <button type="button" className={"btn primary" + (saving || !name.trim() ? " disabled" : "")}
           disabled={saving || !name.trim()} onClick={handleAdd}>
           {saving ? "Adding…" : "+ Add"}
         </button>
       </div>
 
-      {error && <div className="warn" style={{ marginTop: 10 }}>{error}</div>}
+      {error && <div className="warn" style={{ marginTop: 8 }}>{error}</div>}
 
-      <div className="food-list" style={{ marginTop: 16 }}>
-        {foodItems.length === 0 ? (
-          <div className="muted" style={{ fontSize: 13, padding: "10px 0" }}>Nothing added yet.</div>
-        ) : foodItems.map((f) => (
+      <div className="food-list" style={{ marginTop: 10 }}>
+        {items.length === 0 ? (
+          <div className="muted" style={{ fontSize: 12.5, padding: "6px 0" }}>Nothing added yet.</div>
+        ) : items.map((f) => (
           <div key={f.id} className="food-list-row">
             <span className={`tag food-tag-${f.category}`}>{f.category}</span>
             <span className="food-list-name">{f.name}</span>
@@ -532,22 +524,18 @@ function FoodListModal({ place, foodItems, onAdd, onDelete, onClose }) {
           </div>
         ))}
       </div>
-
-      <div className="modal-actions" style={{ marginTop: 18 }}>
-        <button type="button" className="btn ghost" onClick={onClose}>Close</button>
-      </div>
-    </Modal>
+    </div>
   );
 }
 
 function ItineraryTab({ currentUser, users }) {
-  const [places,     setPlaces]     = useState([]);
-  const [foodItems,  setFoodItems]  = useState([]);
-  const [loading,    setLoading]    = useState(true);
-  const [showAdd,    setShowAdd]    = useState(false);
-  const [editPlace,  setEditPlace]  = useState(null);
-  const [foodPlace,  setFoodPlace]  = useState(null);
-  const [deleteId,   setDeleteId]   = useState(null);
+  const [places,      setPlaces]      = useState([]);
+  const [foodItems,   setFoodItems]   = useState([]);
+  const [loading,     setLoading]     = useState(true);
+  const [showAdd,     setShowAdd]     = useState(false);
+  const [editPlace,   setEditPlace]   = useState(null);
+  const [deleteId,    setDeleteId]    = useState(null);
+  const [expandedIds, setExpandedIds] = useState(() => new Set());
 
   useEffect(() => { loadAll(); }, []);
 
@@ -560,11 +548,23 @@ function ItineraryTab({ currentUser, users }) {
       ]);
       setPlaces(placeData || []);
       setFoodItems(foodData || []);
+      setExpandedIds(new Set((placeData || []).map((p) => p.id)));
     } catch (e) {
       console.error("ItineraryTab.loadAll:", e.message);
     }
     setLoading(false);
   }
+
+  function toggleExpand(id) {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function expandAll()   { setExpandedIds(new Set(places.map((p) => p.id))); }
+  function collapseAll() { setExpandedIds(new Set()); }
 
   async function handleDelete(id) {
     if (deleteId !== id) { setDeleteId(id); return; }
@@ -606,34 +606,37 @@ function ItineraryTab({ currentUser, users }) {
         <span className="toolbar-meta">
           {places.length} place{places.length !== 1 ? "s" : ""} planned
         </span>
+        <button className="btn ghost" onClick={expandAll}>Expand all</button>
+        <button className="btn ghost" onClick={collapseAll}>Collapse all</button>
         <button className="btn primary" style={{ marginLeft: "auto" }} onClick={() => setShowAdd(true)}>+ Add place</button>
       </div>
 
       <section className="panel">
         <div className="panel-body no-pad">
-          <table className="data">
+          <table className="data itinerary-tree">
             <thead>
               <tr>
                 <th style={{ width: 36 }}>#</th>
-                <th>Place</th>
-                <th style={{ width: 100 }}>From</th>
-                <th style={{ width: 100 }}>To</th>
+                <th>From</th>
+                <th>To</th>
+                <th style={{ width: 100 }}>Start</th>
+                <th style={{ width: 100 }}>End</th>
                 <th style={{ width: 72 }}>Days</th>
                 <th style={{ width: 110 }}>Travel by</th>
-                <th style={{ width: 150 }}>Food to try</th>
+                <th style={{ width: 120 }}>Food to try</th>
                 <th style={{ width: 80 }}></th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={8} style={{ textAlign: "center", padding: 36, color: "var(--muted)" }}>
+                  <td colSpan={9} style={{ textAlign: "center", padding: 36, color: "var(--muted)" }}>
                     Loading…
                   </td>
                 </tr>
               ) : sortedPlaces.length === 0 ? (
                 <tr>
-                  <td colSpan={8}>
+                  <td colSpan={9}>
                     <Empty
                       title="No places yet"
                       sub="Click + Add place to start planning your itinerary."
@@ -643,31 +646,49 @@ function ItineraryTab({ currentUser, users }) {
               ) : sortedPlaces.map((p, i) => {
                 const days = tripDays(p.start_date, p.end_date);
                 const mode = TRAVEL_MODES.find((m) => m.value === p.travel_mode);
+                const isOpen = expandedIds.has(p.id);
+                const placeFood = foodItems.filter((f) => f.place_id === p.id);
                 return (
-                  <tr key={p.id}>
-                    <td className="muted mono" style={{ fontSize: 12 }}>{i + 1}</td>
-                    <td style={{ fontSize: 13, fontWeight: 500 }}>{p.city}, {p.country}</td>
-                    <td className="mono muted" style={{ fontSize: 12 }}>{p.start_date ? fmtDate(p.start_date) : "—"}</td>
-                    <td className="mono muted" style={{ fontSize: 12 }}>{p.end_date ? fmtDate(p.end_date) : "—"}</td>
-                    <td>{days ? <span className="trip-days-badge">{days}</span> : <span className="muted">—</span>}</td>
-                    <td><span className={`mode-badge mode-${p.travel_mode}`}>{mode ? mode.label : p.travel_mode || "—"}</span></td>
-                    <td>
-                      <button className="btn ghost" style={{ padding: "4px 10px", fontSize: 12.5 }} onClick={() => setFoodPlace(p)}>
-                        Food to try ({foodCountByPlace[p.id] || 0})
-                      </button>
-                    </td>
-                    <td className="r" style={{ whiteSpace: "nowrap" }}>
-                      <button className="icon-btn" title="Edit" onClick={() => setEditPlace(p)}>✎</button>
-                      <button
-                        className={"row-del" + (deleteId === p.id ? " confirm" : "")}
-                        title={deleteId === p.id ? "Click again to confirm" : "Delete"}
-                        onClick={() => handleDelete(p.id)}
-                        onBlur={() => setDeleteId(null)}
-                      >
-                        {deleteId === p.id ? "Confirm" : "✕"}
-                      </button>
-                    </td>
-                  </tr>
+                  <React.Fragment key={p.id}>
+                    <tr className="itinerary-place-row">
+                      <td className="muted mono" style={{ fontSize: 12 }}>{i + 1}</td>
+                      <td style={{ fontSize: 13 }}>{p.origin || "—"}</td>
+                      <td style={{ fontSize: 13, fontWeight: 500 }}>{p.destination}</td>
+                      <td className="mono muted" style={{ fontSize: 12 }}>{p.start_date ? fmtDate(p.start_date) : "—"}</td>
+                      <td className="mono muted" style={{ fontSize: 12 }}>{p.end_date ? fmtDate(p.end_date) : "—"}</td>
+                      <td>{days ? <span className="trip-days-badge">{days}</span> : <span className="muted">—</span>}</td>
+                      <td><span className={`mode-badge mode-${p.travel_mode}`}>{mode ? mode.label : p.travel_mode || "—"}</span></td>
+                      <td>
+                        <button className="expand-toggle" onClick={() => toggleExpand(p.id)}>
+                          <span className={"expand-chevron" + (isOpen ? " open" : "")}>▸</span>
+                          Food to try ({foodCountByPlace[p.id] || 0})
+                        </button>
+                      </td>
+                      <td className="r" style={{ whiteSpace: "nowrap" }}>
+                        <button className="icon-btn" title="Edit" onClick={() => setEditPlace(p)}>✎</button>
+                        <button
+                          className={"row-del" + (deleteId === p.id ? " confirm" : "")}
+                          title={deleteId === p.id ? "Click again to confirm" : "Delete"}
+                          onClick={() => handleDelete(p.id)}
+                          onBlur={() => setDeleteId(null)}
+                        >
+                          {deleteId === p.id ? "Confirm" : "✕"}
+                        </button>
+                      </td>
+                    </tr>
+                    {isOpen && (
+                      <tr className="itinerary-food-row">
+                        <td></td>
+                        <td colSpan={8}>
+                          <FoodToTryPanel
+                            items={placeFood}
+                            onAdd={(item) => handleAddFood(p, item)}
+                            onDelete={handleDeleteFood}
+                          />
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                 );
               })}
             </tbody>
@@ -690,15 +711,6 @@ function ItineraryTab({ currentUser, users }) {
           currentUser={currentUser}
           onSave={() => { setEditPlace(null); loadAll(); }}
           onClose={() => setEditPlace(null)}
-        />
-      )}
-      {foodPlace && (
-        <FoodListModal
-          place={foodPlace}
-          foodItems={foodItems.filter((f) => f.place_id === foodPlace.id)}
-          onAdd={(item) => handleAddFood(foodPlace, item)}
-          onDelete={handleDeleteFood}
-          onClose={() => setFoodPlace(null)}
         />
       )}
     </div>
