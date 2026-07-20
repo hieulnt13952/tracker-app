@@ -478,11 +478,14 @@ function PlaceModal({ place, users, currentUser, onSave, onClose }) {
   );
 }
 
-function FoodToTryPanel({ items, onAdd, onDelete }) {
-  const [name,     setName]     = useState("");
-  const [category, setCategory] = useState("restaurant");
-  const [saving,   setSaving]   = useState(false);
-  const [error,    setError]    = useState("");
+function FoodToTryPanel({ items, onAdd, onDelete, onUpdateLink }) {
+  const [name,          setName]          = useState("");
+  const [category,      setCategory]      = useState("restaurant");
+  const [saving,        setSaving]        = useState(false);
+  const [error,         setError]         = useState("");
+  const [editingLinkId, setEditingLinkId] = useState(null);
+  const [linkDraft,     setLinkDraft]     = useState("");
+  const skipBlurSave = useRef(false);
 
   async function handleAdd() {
     if (!name.trim() || saving) return;
@@ -494,6 +497,25 @@ function FoodToTryPanel({ items, onAdd, onDelete }) {
       setError(e.message || "Failed to add item");
     }
     setSaving(false);
+  }
+
+  function startEditLink(f) {
+    setEditingLinkId(f.id);
+    setLinkDraft(f.link || "");
+  }
+
+  function cancelEditLink() {
+    skipBlurSave.current = true;
+    setEditingLinkId(null);
+    setLinkDraft("");
+  }
+
+  function saveLink(f) {
+    if (skipBlurSave.current) { skipBlurSave.current = false; return; }
+    const value = linkDraft.trim();
+    setEditingLinkId(null);
+    if (value === (f.link || "")) return;
+    onUpdateLink(f.id, value);
   }
 
   return (
@@ -520,6 +542,25 @@ function FoodToTryPanel({ items, onAdd, onDelete }) {
           <div key={f.id} className="food-list-row">
             <span className={`tag food-tag-${f.category}`}>{f.category}</span>
             <span className="food-list-name">{f.name}</span>
+            {editingLinkId === f.id ? (
+              <input type="url" autoFocus className="food-link-input" value={linkDraft}
+                placeholder="https://…"
+                onChange={(e) => setLinkDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") { e.preventDefault(); saveLink(f); }
+                  if (e.key === "Escape") { e.preventDefault(); cancelEditLink(); }
+                }}
+                onBlur={() => saveLink(f)} />
+            ) : f.link ? (
+              <>
+                <a className="food-list-link" href={f.link} target="_blank" rel="noopener noreferrer" title={f.link}>
+                  🔗 Link
+                </a>
+                <button className="icon-btn" title="Edit link" onClick={() => startEditLink(f)}>✎</button>
+              </>
+            ) : (
+              <button className="btn ghost food-link-add" onClick={() => startEditLink(f)}>+ Link</button>
+            )}
             <button className="icon-btn" title="Remove" onClick={() => onDelete(f.id)}>✕</button>
           </div>
         ))}
@@ -587,6 +628,15 @@ function ItineraryTab({ currentUser, users }) {
   async function handleDeleteFood(id) {
     await db.deleteFoodItem(id);
     setFoodItems((prev) => prev.filter((f) => f.id !== id));
+  }
+
+  async function handleUpdateFoodLink(id, link) {
+    setFoodItems((prev) => prev.map((f) => f.id === id ? { ...f, link } : f));
+    try {
+      await db.updateFoodItem(id, { link });
+    } catch (e) {
+      console.error("updateFoodItem:", e.message);
+    }
   }
 
   const foodCountByPlace = useMemo(() => {
@@ -684,6 +734,7 @@ function ItineraryTab({ currentUser, users }) {
                             items={placeFood}
                             onAdd={(item) => handleAddFood(p, item)}
                             onDelete={handleDeleteFood}
+                            onUpdateLink={handleUpdateFoodLink}
                           />
                         </td>
                       </tr>

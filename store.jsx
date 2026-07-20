@@ -419,6 +419,12 @@ const db = {
     if (error) throw error;
   },
 
+  async updateFoodItem(id, updates) {
+    if (DEV_MODE) return;
+    const { error } = await _supa.from("travel_food_items").update(updates).eq("id", id);
+    if (error) throw error;
+  },
+
   async deleteFoodItem(id) {
     if (DEV_MODE) return;
     const { error } = await _supa.from("travel_food_items").delete().eq("id", id);

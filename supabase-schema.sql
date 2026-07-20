@@ -280,11 +280,17 @@ create table if not exists travel_food_items (
   name        text  not null,
   category    text  not null default 'restaurant' check (category in ('restaurant', 'dish', 'cuisine')),
   note        text,
+  link        text,
   created_at  timestamptz not null default now()
 );
 
 alter table travel_food_items enable row level security;
 create policy "anon_all" on travel_food_items for all to anon using (true) with check (true);
+
+--- MIGRATION — run this if travel_food_items was already created without
+--- the link column (safe to run multiple times):
+---
+--   alter table travel_food_items add column if not exists link text;
 
 -- ---- Travel — things to buy checklist ----------------------------
 create table if not exists travel_shopping_items (
