@@ -794,16 +794,23 @@ function ShoppingTab({ currentUser }) {
 
   return (
     <div>
-      <div className="toolbar" style={{ marginBottom: "1rem" }}>
+      <div className="shop-add-bar">
         <input
-          type="text" value={newItem} placeholder="Thing to buy…" style={{ maxWidth: 320 }}
+          type="text" className="shop-add-input" value={newItem} placeholder="What do you want to buy?"
+          autoFocus
           onChange={(e) => setNewItem(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
         />
-        <button className={"btn primary" + (adding || !newItem.trim() ? " disabled" : "")}
+        <button className={"btn primary shop-add-btn" + (adding || !newItem.trim() ? " disabled" : "")}
           disabled={adding || !newItem.trim()} onClick={handleAdd}>
           {adding ? "Adding…" : "+ Add"}
         </button>
+      </div>
+
+      <div className="toolbar" style={{ marginBottom: "1rem" }}>
+        <span className="toolbar-meta">
+          {items.length} item{items.length !== 1 ? "s" : ""} total
+        </span>
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={{ width: "auto", marginLeft: "auto" }}>
           <option value="all">All statuses</option>
           {SHOP_STATUSES.map((s) => (

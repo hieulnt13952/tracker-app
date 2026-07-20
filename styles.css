@@ -734,6 +734,22 @@ table.data tr:hover .row-del { opacity: 1; }
 .food-tag-dish       { background: #eaf2e0; color: #5a8f3f; }
 .food-tag-cuisine    { background: #f6efe0; color: #a87a2f; }
 
+/* ---- things to buy — add bar (the main feature, kept prominent) ---- */
+.shop-add-bar {
+  display: flex; gap: 12px; margin-bottom: 18px;
+}
+.shop-add-input {
+  flex: 1; font-size: 18px; padding: 16px 20px;
+  border: 1px solid var(--border-2); border-radius: 12px;
+  background: var(--surface); color: var(--text);
+}
+.shop-add-input:focus {
+  border-color: var(--accent); box-shadow: 0 0 0 4px rgba(47,111,107,.12);
+}
+.shop-add-btn {
+  font-size: 15px; padding: 0 28px; border-radius: 12px;
+}
+
 /* ---- things to buy — status select ---- */
 .shop-status-select {
   font-size: 11.5px; font-weight: 600; border-radius: 20px;
