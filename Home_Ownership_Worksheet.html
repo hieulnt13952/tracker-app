@@ -362,10 +362,6 @@
           <div class="k">Total interest paid (full schedule)</div>
           <div class="v" id="out-E7"></div>
         </div>
-        <div class="stat">
-          <div class="k">NPV of total interest paid <span style="font-weight:400">(discounted at the loan rate)</span></div>
-          <div class="v" id="out-E8"></div>
-        </div>
       </div>
     </div>
 
@@ -552,15 +548,7 @@
       });
       prevBal = endBal;
     }
-
-    // NPV of the interest cash-flow stream, discounted at the same monthly loan rate
-    var monthlyRate = ratePct/1200;
-    var npvInterest = 0;
-    for (var j=0; j<rows.length; j++){
-      npvInterest += rows[j].interest / Math.pow(1+monthlyRate, j+1);
-    }
-
-    return {D5: D5, rows: rows, totalInterest: rows[rows.length-1].cum, npvInterest: npvInterest};
+    return {D5: D5, rows: rows, totalInterest: rows[rows.length-1].cum};
   }
 
   var yearMarkers = {};
@@ -714,7 +702,6 @@
     var mc = calcMortgage(loanAmount, ratePct, termYears);
     setText('out-D5', fmtCurrency(mc.D5,2));
     setText('out-E7', fmtCurrency(mc.totalInterest,2));
-    setText('out-E8', fmtCurrency(mc.npvInterest,2));
 
     if (!amortBuilt) buildAmortRows();
     updateAmortRows(mc.rows);
