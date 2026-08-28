@@ -108,7 +108,7 @@ function AppShell({ currentUser, onLogout, onUpdateUser }) {
     { id: "wishlist",    label: "Wishlist",            short: "Wishlist", icon: "♡" },
     { id: "dictionary",  label: "Learning Dictionary", short: "Dict",     icon: "α" },
     { id: "travel",      label: "Travel Logs",         short: "Travel",   icon: "✈" },
-    { id: "roadmap",     label: "Hieu's Roadmap",     short: "Roadmap",  icon: "◎" },
+    { id: "homeworksheet", label: "Home Ownership",   short: "Home",     icon: "⌂" },
   ];
 
   const go = (r) => { setRoute(r); setOpenAccount(null); };
@@ -238,7 +238,7 @@ function AppShell({ currentUser, onLogout, onUpdateUser }) {
               onRefresh={() => db.loadAll().then(setState).catch((e) => setDbError(e.message || String(e)))}
             />
           )}
-          {route === "roadmap" && <iframe src="analytics-engineer-roadmap.html" className="roadmap-frame" title="Analytics Engineer Roadmap" />}
+          {route === "homeworksheet" && <iframe src="Home_Ownership_Worksheet.html" className="embed-frame" title="Home Ownership Worksheet" />}
         </div>
       </main>
 

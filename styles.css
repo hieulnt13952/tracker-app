@@ -389,8 +389,8 @@ table.data tr:hover .row-del { opacity: 1; }
   margin-bottom: 10px;
 }
 
-/* ---- roadmap iframe ---- */
-.roadmap-frame {
+/* ---- embedded page iframe ---- */
+.embed-frame {
   width: 100%; height: 100%;
   border: none; display: block;
 }
