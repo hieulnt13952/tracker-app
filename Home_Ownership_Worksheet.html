@@ -431,8 +431,16 @@
     D6: null
   };
 
-  var ADDL = []; // additional living cost line items: { id, label, amount }
-  var addlNextId = 1;
+  var ADDL = [ // additional living cost line items: { id, label, amount }
+    { id: 1, label: "Utilities & Communications", amount: 0 },
+    { id: 2, label: "Food & Household", amount: 0 },
+    { id: 3, label: "Transportation", amount: 0 },
+    { id: 4, label: "Health & Insurance", amount: 0 },
+    { id: 5, label: "Personal Care & Clothing", amount: 0 },
+    { id: 6, label: "Entertainment & Social", amount: 0 },
+    { id: 7, label: "Travel & Family", amount: 0 }
+  ];
+  var addlNextId = 8;
 
   function escapeHtml(s){
     return String(s).replace(/[&<>"']/g, function(c){
