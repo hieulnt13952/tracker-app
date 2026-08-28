@@ -358,13 +358,13 @@
           <div class="k">Minimum monthly payment</div>
           <div class="v" id="out-D5"></div>
         </div>
-        <div class="stat editable">
-          <div class="k">Actual monthly payment <span style="font-weight:400">(optional override, must be ≥ minimum)</span></div>
-          <div class="v"><input type="number" id="D6" step="10" placeholder="—"></div>
-        </div>
         <div class="stat">
           <div class="k">Total interest paid (full schedule)</div>
           <div class="v" id="out-E7"></div>
+        </div>
+        <div class="stat">
+          <div class="k">NPV of total interest paid <span style="font-weight:400">(discounted at the loan rate)</span></div>
+          <div class="v" id="out-E8"></div>
         </div>
       </div>
     </div>
@@ -427,8 +427,7 @@
   };
 
   var M = { // mortgage calculator overrides
-    E1_override: null, E2_override: null, E3_override: null,
-    D6: null
+    E1_override: null, E2_override: null, E3_override: null
   };
 
   var ADDL = [ // additional living cost line items: { id, label, amount }
@@ -534,17 +533,16 @@
   }
 
   // ---------- Mortgage calculator engine ----------
-  function calcMortgage(loanAmount, ratePct, termYears, D6){
+  function calcMortgage(loanAmount, ratePct, termYears){
     var D5 = eround( ((ratePct/1200) + (ratePct/1200) / (Math.pow(1+ratePct/1200, termYears*12)-1)) * loanAmount, 2);
     var n = 360;
     var rows = [];
     var prevBal = loanAmount;
     var cum = 0;
-    var basePayment = D6 ? Math.max(D6, D5) : D5;
     for (var i=0; i<n; i++){
       var beginBal = prevBal;
       var interest = eround(beginBal * (ratePct/12/100), 2);
-      var payment = Math.min(basePayment, beginBal + interest);
+      var payment = Math.min(D5, beginBal + interest);
       var principal = payment - interest;
       var endBal = beginBal - principal;
       cum += interest;
@@ -554,7 +552,15 @@
       });
       prevBal = endBal;
     }
-    return {D5: D5, rows: rows, totalInterest: rows[rows.length-1].cum};
+
+    // NPV of the interest cash-flow stream, discounted at the same monthly loan rate
+    var monthlyRate = ratePct/1200;
+    var npvInterest = 0;
+    for (var j=0; j<rows.length; j++){
+      npvInterest += rows[j].interest / Math.pow(1+monthlyRate, j+1);
+    }
+
+    return {D5: D5, rows: rows, totalInterest: rows[rows.length-1].cum, npvInterest: npvInterest};
   }
 
   var yearMarkers = {};
@@ -705,9 +711,10 @@
     document.getElementById('link-E2').style.display = (M.E2_override===null) ? 'none' : 'inline-block';
     document.getElementById('link-E3').style.display = (M.E3_override===null) ? 'none' : 'inline-block';
 
-    var mc = calcMortgage(loanAmount, ratePct, termYears, M.D6);
+    var mc = calcMortgage(loanAmount, ratePct, termYears);
     setText('out-D5', fmtCurrency(mc.D5,2));
     setText('out-E7', fmtCurrency(mc.totalInterest,2));
+    setText('out-E8', fmtCurrency(mc.npvInterest,2));
 
     if (!amortBuilt) buildAmortRows();
     updateAmortRows(mc.rows);
@@ -740,12 +747,6 @@
       recalc();
     });
   });
-  document.getElementById('D6').addEventListener('input', function(){
-    var v = parseFloat(this.value);
-    M.D6 = (isNaN(v) || v===0) ? null : v;
-    recalc();
-  });
-
   // ---------- wire up additional living costs ----------
   function addAddlItem(){
     var labelEl = document.getElementById('addl-label');
