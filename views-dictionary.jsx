@@ -2,24 +2,36 @@
 //  views-dictionary.jsx — Learning Dictionary
 // ============================================================
 
-async function fetchDefinition(word) {
-  const res = await fetch(
-    "https://api.dictionaryapi.dev/api/v2/entries/en/" + encodeURIComponent(word.trim())
-  );
-  if (res.status === 404) throw new Error("No definition found for \"" + word + "\"");
-  if (!res.ok) throw new Error("API error " + res.status);
-  return res.json();
+// Normalizes a freedictionaryapi.com response (entries grouped by part of
+// speech, each with senses[]) into the { word, phonetic, meanings } shape
+// the rest of this file expects.
+function normalizeDictionaryEntry(data) {
+  const entries = data.entries || [];
+  const phonetic = entries
+    .flatMap((e) => e.pronunciations || [])
+    .find((p) => p.text)?.text || null;
+
+  const meanings = entries.map((e) => ({
+    partOfSpeech: e.partOfSpeech,
+    definitions: (e.senses || []).map((s) => ({
+      definition: s.definition,
+      example: (s.examples && s.examples[0]) || null,
+    })),
+  }));
+
+  return { word: data.word, phonetic, meanings };
 }
 
-// ---- Pronunciation audio player ------------------------------------
-function AudioPlayer({ phonetics }) {
-  const audioUrl = (phonetics || []).find((p) => p.audio)?.audio;
-  if (!audioUrl) return null;
-  return (
-    <audio controls style={{ height: 28, verticalAlign: "middle" }}>
-      <source src={audioUrl} type="audio/mpeg" />
-    </audio>
+async function fetchDefinition(word) {
+  const res = await fetch(
+    "https://freedictionaryapi.com/api/v1/entries/en/" + encodeURIComponent(word.trim())
   );
+  if (!res.ok) throw new Error("API error " + res.status);
+  const data = await res.json();
+  if (!data.entries || data.entries.length === 0) {
+    throw new Error("No definition found for \"" + word + "\"");
+  }
+  return [normalizeDictionaryEntry(data)];
 }
 
 // ============================================================
@@ -122,7 +134,6 @@ function DictionarySearch({ currentUser, savedWords, onSave }) {
                 {entry.phonetic}
               </span>
             )}
-            <AudioPlayer phonetics={entry.phonetics} />
             <span style={{ marginLeft: "auto" }}>
               {alreadySaved || justSaved ? (
                 <span style={{ fontSize: 13, color: "var(--pos)", fontWeight: 500 }}>✓ Saved</span>
@@ -191,15 +202,14 @@ function WordDetailModal({ entry, onClose }) {
 
   return (
     <Modal title={entry.word} onClose={onClose} width={680}>
-      {/* Phonetic + audio */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
-        {entry.phonetic && (
+      {/* Phonetic */}
+      {entry.phonetic && (
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
           <span style={{ fontSize: 15, color: "var(--muted)", fontFamily: '"IBM Plex Mono", monospace' }}>
             {entry.phonetic}
           </span>
-        )}
-        <AudioPlayer phonetics={entry.phonetics} />
-      </div>
+        </div>
+      )}
 
       {/* Definitions table */}
       <div style={{ overflowX: "auto" }}>
@@ -590,7 +600,6 @@ function LookupPanel({ currentUser, savedWords, onSave }) {
                     {entry.phonetic}
                   </span>
                 )}
-                <AudioPlayer phonetics={entry.phonetics} />
               </div>
               {alreadySaved || justSaved ? (
                 <span style={{ fontSize: 12, color: "var(--pos)", fontWeight: 500, paddingTop: 2 }}>✓ Saved</span>
