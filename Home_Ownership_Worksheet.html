@@ -161,9 +161,7 @@
 
   <div class="masthead">
     <h1>Ontario First-Time Home Buyer<br>All-In Cost &amp; Monthly Budget</h1>
-    <div class="sub">HTML rebuild of <em>_Home_Ownership_Worksheet.xlsx</em><br>2 linked tabs · live formulas · Aug 2026 rates</div>
   </div>
-  <div class="banner">Blue cells are inputs — type over them. Everything else is calculated automatically, exactly as in the spreadsheet. The two tabs below are linked the same way the workbook links them.</div>
 
   <div class="tabs">
     <button class="tab-btn active" data-tab="fthb">FTHB Budget</button>
@@ -360,10 +358,8 @@
     </div>
 
     <div class="section">
-      <div class="section-head">Amortization Schedule &nbsp;·&nbsp; 360 monthly payments (30-year grid; extra payments accelerate payoff)</div>
+      <div class="section-head">Amortization Schedule &nbsp;·&nbsp; 360 monthly payments (30-year grid)</div>
       <div class="legend">
-        <span><span class="swatch" style="background:var(--input-blue);border-color:var(--input-blue-border)"></span>One-time extra payment (G) — editable per month</span>
-        <span><span class="swatch" style="background:#fff"></span>Changed monthly payment from here on (H) — editable per month</span>
         <span>Rows highlight at each 12-month mark.</span>
       </div>
       <div class="amort-wrap">
@@ -371,14 +367,14 @@
           <thead>
             <tr>
               <th>#</th><th>Marker</th><th>Beginning balance</th><th>Interest</th><th>Principal</th><th>Payment</th>
-              <th>Total interest paid</th><th>One-time extra pmt</th><th>Changed monthly pmt</th><th>Ending balance</th>
+              <th>Total interest paid</th><th>Ending balance</th>
             </tr>
           </thead>
           <tbody id="amort-body"></tbody>
         </table>
       </div>
     </div>
-    <div class="foot">Formulas replicate the workbook row-for-row: beginning balance → interest = ROUND(balance × rate/12,2) → payment (respects any override / extra payment / changed-payment instruction, never less than the minimum, never more than payoff) → principal = payment − interest → next balance. Loan amount and rate/term stay linked live to the FTHB Budget tab unless you edit them directly here, just like typing over a linked cell in Excel.</div>
+    <div class="foot">Formulas replicate the workbook row-for-row: beginning balance → interest = ROUND(balance × rate/12,2) → payment (respects any override, never less than the minimum, never more than payoff) → principal = payment − interest → next balance. Loan amount and rate/term stay linked live to the FTHB Budget tab unless you edit them directly here, just like typing over a linked cell in Excel.</div>
   </div>
 
 </div>
@@ -419,9 +415,7 @@
 
   var M = { // mortgage calculator overrides
     E1_override: null, E2_override: null, E3_override: null,
-    D6: null,
-    G: new Array(360).fill(0),
-    H: new Array(360).fill(null)
+    D6: null
   };
 
   // ---------- FTHB calc engine ----------
@@ -508,36 +502,25 @@
   }
 
   // ---------- Mortgage calculator engine ----------
-  function calcMortgage(loanAmount, ratePct, termYears, D6, G, H){
+  function calcMortgage(loanAmount, ratePct, termYears, D6){
     var D5 = eround( ((ratePct/1200) + (ratePct/1200) / (Math.pow(1+ratePct/1200, termYears*12)-1)) * loanAmount, 2);
     var n = 360;
     var rows = [];
     var prevBal = loanAmount;
-    var prevPayment = null;
-    var prevG = 0;
     var cum = 0;
+    var basePayment = D6 ? Math.max(D6, D5) : D5;
     for (var i=0; i<n; i++){
       var beginBal = prevBal;
       var interest = eround(beginBal * (ratePct/12/100), 2);
-      var payment;
-      if (i===0){
-        var base0 = D6 ? Math.max(D6, D5) : D5;
-        payment = Math.min(base0 + (G[i]||0), beginBal + interest);
-      } else {
-        var h = H[i];
-        var base = h ? Math.max(D5, h) : (prevPayment - prevG);
-        payment = Math.min(base + (G[i]||0), beginBal + interest);
-      }
+      var payment = Math.min(basePayment, beginBal + interest);
       var principal = payment - interest;
       var endBal = beginBal - principal;
       cum += interest;
       rows.push({
         idx: i+1, beginBal: beginBal, interest: interest, principal: principal,
-        payment: payment, cum: cum, extra: G[i]||0, changed: H[i], endBal: endBal
+        payment: payment, cum: cum, endBal: endBal
       });
       prevBal = endBal;
-      prevPayment = payment;
-      prevG = G[i]||0;
     }
     return {D5: D5, rows: rows, totalInterest: rows[rows.length-1].cum};
   }
@@ -563,24 +546,10 @@
         '<td data-f="principal"></td>'+
         '<td data-f="payment"></td>'+
         '<td data-f="cum"></td>'+
-        '<td><input type="number" step="10" class="g-input" data-i="'+i+'" value="0"></td>'+
-        '<td><input type="number" step="10" class="h-input" data-i="'+i+'" placeholder="—"></td>'+
         '<td data-f="endBal"></td>';
       frag.appendChild(tr);
     }
     body.appendChild(frag);
-    body.addEventListener('input', function(e){
-      var t = e.target;
-      var i = parseInt(t.dataset.i, 10);
-      if (t.classList.contains('g-input')){
-        M.G[i] = parseFloat(t.value) || 0;
-        recalc();
-      } else if (t.classList.contains('h-input')){
-        var v = parseFloat(t.value);
-        M.H[i] = (isNaN(v) || v===0) ? null : v;
-        recalc();
-      }
-    });
     amortBuilt = true;
   }
 
@@ -675,7 +644,7 @@
     document.getElementById('link-E2').style.display = (M.E2_override===null) ? 'none' : 'inline-block';
     document.getElementById('link-E3').style.display = (M.E3_override===null) ? 'none' : 'inline-block';
 
-    var mc = calcMortgage(loanAmount, ratePct, termYears, M.D6, M.G, M.H);
+    var mc = calcMortgage(loanAmount, ratePct, termYears, M.D6);
     setText('out-D5', fmtCurrency(mc.D5,2));
     setText('out-E7', fmtCurrency(mc.totalInterest,2));
 
